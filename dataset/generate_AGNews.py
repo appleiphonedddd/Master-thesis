@@ -5,7 +5,7 @@ import random
 import torchtext
 from utils.dataset_utils import check, separate_data, split_data, save_file
 from utils.language_utils import tokenizer
-
+import matplotlib.pyplot as plt
 
 random.seed(1)
 np.random.seed(1)
@@ -66,6 +66,37 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
             statistic, niid, balance, partition)
 
     print("The size of vocabulary:", len(vocab))
+
+    # Visualize the train & test data distribution of each client and save the figure
+    rows = (num_clients + 3) // 4
+    fig, axes = plt.subplots(rows, 4, figsize=(4 * 4, 3 * rows))
+    axes = axes.flatten()
+    width = 0.4
+
+    for i in range(num_clients):
+        
+        y_train = train_data[i]['y']
+        y_test  = test_data[i]['y']
+
+        train_counts = [np.sum(y_train == c) for c in range(num_classes)]
+        test_counts  = [np.sum(y_test  == c) for c in range(num_classes)]
+        x = np.arange(num_classes)
+
+        axes[i].bar(x - width/2, train_counts, width=width, label='Train', color='C0')
+        axes[i].bar(x + width/2, test_counts,  width=width, label='Test',  color='C1')
+
+        axes[i].set_title(f'Client {i}')
+        axes[i].set_xlabel('Class')
+        axes[i].set_ylabel('Samples')
+        axes[i].legend(fontsize='small')
+
+    for j in range(num_clients, len(axes)):
+        fig.delaxes(axes[j])
+
+    plt.tight_layout()
+    os.makedirs(os.path.join(dir_path, 'figures'), exist_ok=True)
+    fig.savefig(os.path.join(dir_path, 'figures', 'client_data_distribution.png'))
+    plt.close(fig)
 
 
 if __name__ == "__main__":
