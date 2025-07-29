@@ -39,25 +39,32 @@ conda activate PFL
 
 2. Generate the dataset based on the data distribution you personally want to test, for example FashionMNIST
 
+**IID**: In this case, the data is evenly and randomly distributed across all clients. Each client receives a representative sample from the entire dataset, meaning the local data distributions closely resemble the global data distribution. For example, with the FashionMNIST dataset, every client holds roughly equal proportions of all 10 labels.
+
 **Pathological non-IID**: In this case, each client only holds a subset of the labels, for example, just 2 out of 10 labels from the FashionMNIST dataset, even though the overall dataset contains all 10 labels. This leads to a highly skewed distribution of data across clients.
 
-**Practical non-IID**:  
-Clients still see samples from _all_ labels, but with realistic heterogeneity in how the data is distributed and generated. We simulate this using:
+**Practical(Dirichlet) non-IID**:  
+In this case, clients still have access to samples from all labels, but the data exhibits more realistic and nuanced heterogeneity in how it's distributed or generated. We simulate this using two main strategies:
+
    - **Label distribution skew**  
-     Clients share the same label set but with very different class frequencies. Typically implemented by sampling class–client proportions from a Dirichlet(\<α\>) distribution (smaller α ⇒ more skew).
+     All clients share the same set of labels, but the class frequencies vary significantly across clients. This is typically implemented by sampling client-specific class proportions from a Dirichlet(α) distribution. A smaller α value results in more skewed distributions.
    - **Quantity skew**  
-     Clients have disparate dataset sizes (e.g. one client with 10 000 samples vs. another with only 500).
+     Clients possess varying numbers of samples. For example, one client may have 10,000 data points, while another may only have 500, simulating real-world differences in data volume.
 
 ```sh
 cd ./dataset
+python generate_FashionMNIST.py iid balance - # for iid and balanced scenario
+
 python generate_FashionMNIST.py noniid - pat # for pathological noniid and unbalanced scenario
+
 python generate_FashionMNIST.py noniid - dir # for practical noniid and unbalanced scenario
 ```
 
-3. Run evaluation
+1. Run evaluation
 
 ```sh
 cd ./system
+
 python main.py -data FashionMNIST -m CNN -algo FedAvg -gr 100 -did 0 # using the FashionMNIST dataset, the FedAvg algorithm, and the 4-layer CNN model, communication round 100 and single GPU
 
 python main.py -data Cifar10 -m CNN -algo FedAvg -gr 100 -did 0
