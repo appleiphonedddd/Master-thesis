@@ -111,9 +111,6 @@ class FedAS(Server):
         print(sum(self.Budget[1:])/len(self.Budget[1:]))
 
         print(f'+++++++++++++++++++++++++++++++++++++++++')
-        gen_acc = self.avg_generalization_metrics()
-        print(f'Generalization Acc: {gen_acc}')
-        print(f'+++++++++++++++++++++++++++++++++++++++++')
 
         self.save_results()
         self.save_global_model()

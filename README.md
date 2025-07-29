@@ -53,6 +53,7 @@ In this case, clients still have access to samples from all labels, but the data
 
 ```sh
 cd ./dataset
+
 python generate_FashionMNIST.py iid balance - # for iid and balanced scenario
 
 python generate_FashionMNIST.py noniid - pat # for pathological noniid and unbalanced scenario
