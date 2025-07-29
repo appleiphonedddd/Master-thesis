@@ -52,7 +52,7 @@ In this case, clients still have access to samples from all labels, but the data
      Clients possess varying numbers of samples. For example, one client may have 10,000 data points, while another may only have 500, simulating real-world differences in data volume.
 
 ```sh
-cd ./dataset
+cd dataset/
 
 python generate_FashionMNIST.py iid balance - # for iid and balanced scenario
 
@@ -61,10 +61,10 @@ python generate_FashionMNIST.py noniid - pat # for pathological noniid and unbal
 python generate_FashionMNIST.py noniid - dir # for practical noniid and unbalanced scenario
 ```
 
-1. Run evaluation
+3. Run evaluation
 
 ```sh
-cd ./system
+cd system/
 
 python main.py -data FashionMNIST -m CNN -algo FedAvg -gr 100 -did 0 # using the FashionMNIST dataset, the FedAvg algorithm, and the 4-layer CNN model, communication round 100 and single GPU
 
