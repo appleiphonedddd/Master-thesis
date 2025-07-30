@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 
 random.seed(1)
 np.random.seed(1)
-
 num_clients = 20
 dir_path = "Places365/"
 
