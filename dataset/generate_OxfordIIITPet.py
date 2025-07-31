@@ -86,7 +86,7 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
         partition
     )
 
-    # Visualization (unchanged)
+    # Visualize the train & test data distribution of each client and save the figure
     rows = (num_clients + 3) // 4
     fig, axes = plt.subplots(rows, 4, figsize=(4*4, 3*rows))
     axes = axes.flatten()
