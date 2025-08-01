@@ -51,6 +51,7 @@ from flcore.servers.serverlc import FedLC
 from flcore.servers.serveras import FedAS
 from flcore.servers.serverDodm import FedDodm
 from flcore.servers.servercross import FedCross
+from flcore.servers.serverDCPFL import DCPFL
 
 from flcore.trainmodel.models import *
 
@@ -372,6 +373,12 @@ def run(args):
             
         elif args.algorithm == "FedCross":
             server = FedCross(args, i)
+        
+        elif args.algorithm == "DCPFL":
+            args.head = copy.deepcopy(args.model.fc)
+            args.model.fc = nn.Identity()
+            args.model = BaseHeadSplit(args.model, args.head)
+            server = DCPFL(args, i)
 
         else:
             raise NotImplementedError
