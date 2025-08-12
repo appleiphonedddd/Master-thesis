@@ -20,6 +20,12 @@ class clientDCPFL(Client):
             gamma=args.learning_rate_decay_gamma
         )
 
+        # exchanged model branch (for DML); initialized as a copy of personalized
+        self.model_ex = copy.deepcopy(self.model_per)                              
+        self.optimizer_ex = torch.optim.SGD(self.model_ex.parameters(),            
+                                            lr=self.learning_rate, momentum=0.9)   
+        self.has_exchange = False
+
         # one alpha parameter per model layer for interpolation
         num_layers = len(list(self.model.parameters()))
         self.alpha = [args.alpha] * num_layers
@@ -32,49 +38,84 @@ class clientDCPFL(Client):
                 self.sample_per_class[yy.item()] += 1
         print(self.sample_per_class.int())
 
-    def train(self):
-        trainloader = self.load_train_data()
-        start_time = time.time()
+    def set_exchange_model(self, state_dict):                                   
+        """Receive partner's personalized weights from server (exchange model).""" 
+        try:                                                                        
+            self.model_ex.load_state_dict(state_dict, strict=True)                  
+        except Exception:                                                           
+            self.model_ex.load_state_dict(state_dict, strict=False)                 
+        self.has_exchange = True 
 
-        self.model.train()
-        self.model_per.train()
-
-        epochs = self.local_epochs
-        if self.train_slow:
-            epochs = np.random.randint(1, max(1, epochs // 2))
-
-        for _ in range(epochs):
-            for x, y in trainloader:
-                # move to device
+    def train(self):                                                                
+        trainloader = self.load_train_data()                                        
+        start_time = time.time()                                                    
+                                                                                    
+        # switch to train mode                                                      
+        self.model.train()                                                          
+        self.model_per.train()                                                      
+        if hasattr(self, 'model_ex'):                                               
+            self.model_ex.train()                                                   
+                                                                                    
+        epochs = self.local_epochs                                                  
+        if self.train_slow:                                                         
+            epochs = np.random.randint(1, max(1, epochs // 2))                      
+                                                                                    
+        for _ in range(epochs):                                                     
+            for x, y in trainloader:                                                
                 x = x[0].to(self.device) if isinstance(x, list) else x.to(self.device)
-                y = y.to(self.device)
-                if self.train_slow:
-                    time.sleep(0.1 * np.abs(np.random.rand()))
+                y = y.to(self.device)                                              
+                if self.train_slow:                                                 
+                    time.sleep(0.1 * np.abs(np.random.rand()))                      
+                                                                                                                            
+                self.optimizer.zero_grad()                                         
+                out_g = self.model(x)                                               
+                loss_g = self.loss(out_g, y)                                        
+                loss_g.backward()                                                   
+                self.optimizer.step()                                               
+                                                                                    
+                # DML
+                if getattr(self, "has_exchange", False):
+                    rep_p = self.model_per.base(x)
+                    out_p = self.model_per.head(rep_p)
+                    rep_e = self.model_ex.base(x)
+                    out_e = self.model_ex.head(rep_e)
 
-                # train global branch
-                self.optimizer.zero_grad()
-                out_g = self.model(x)
-                loss_g = self.loss(out_g, y)
-                loss_g.backward()
-                self.optimizer.step()
+                    ce_p = self.loss(out_p, y)
+                    ce_e = self.loss(out_e, y)
 
-                # train personalized branch via deep mutual learning
-                rep = self.model_per.base(x)
-                out_p = self.model_per.head(rep)
-                loss_p = self.loss(out_p, y)
-                self.optimizer_per.zero_grad()
-                loss_p.backward()
-                self.optimizer_per.step()
+    
+                    logp = F.log_softmax(out_p, dim=1)
+                    t_e  = F.softmax(out_e, dim=1).detach()
+                    loge = F.log_softmax(out_e, dim=1)
+                    t_p  = F.softmax(out_p, dim=1).detach()
 
-                # update interpolation weights
-                self.alpha_update()
+                    kl_pe = F.kl_div(logp, t_e, reduction='batchmean')
+                    kl_ep = F.kl_div(loge, t_p, reduction='batchmean')
 
-        # interpolate parameters between global and personalized
-        for idx, (p_per, p_glob) in enumerate(
-            zip(self.model_per.parameters(), self.model.parameters())):
+                    loss_p = ce_p + kl_pe
+                    loss_e = ce_e + kl_ep
+
+                    self.optimizer_per.zero_grad()
+                    self.optimizer_ex.zero_grad()
+                    loss_p.backward()
+                    loss_e.backward()
+                    self.optimizer_per.step()
+                    self.optimizer_ex.step()
+                else:
+                    self.optimizer_per.zero_grad()
+                    rep_p = self.model_per.base(x)
+                    out_p = self.model_per.head(rep_p)
+                    loss_p = self.loss(out_p, y)
+                    loss_p.backward()
+                    self.optimizer_per.step()
+
+                if hasattr(self, "alpha_update"):
+                    self.alpha_update()
+                  
+        for idx, (p_per, p_glob) in enumerate(                                  
+                zip(self.model_per.parameters(), self.model.parameters())):          
             p_per.data = (1 - self.alpha[idx]) * p_glob.data + self.alpha[idx] * p_per.data
-
-        # update timing stats
+                                                                                    
         self.train_time_cost['num_rounds'] += 1
         self.train_time_cost['total_cost'] += time.time() - start_time
 

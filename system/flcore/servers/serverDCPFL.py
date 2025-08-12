@@ -3,7 +3,7 @@ import random
 import torch
 import numpy as np
 from sklearn.cluster import DBSCAN
-from sklearn.preprocessing import StandardScaler  # ### NEW
+from sklearn.preprocessing import StandardScaler
 from flcore.clients.clientDCPFL import clientDCPFL
 from flcore.servers.serverbase import Server
 
@@ -191,19 +191,29 @@ class DCPFL(Server):
                 if len(history) >= 3:
                     wma = (0.1 * history[-3] + 0.1 * history[-2] + 0.8 * history[-1])
                     if history[-1] < wma:
-                        same_cluster = [
-                            j for j, lab in enumerate(labels) if lab == labels[idx] and j != idx
-                        ]
+                        same_cluster = [j for j, lab in enumerate(labels) if lab == labels[idx] and j != idx]
                         partner = random.choice(same_cluster) if same_cluster else random.choice(
                             [j for j in range(len(labels)) if j != idx]
                         )
-                        
-                        self.uploaded_models[idx], self.uploaded_models[partner] = (
-                            self.uploaded_models[partner],
-                            self.uploaded_models[idx],
-                        )
-                        print(f"Client {cid} exchanged model with client {self.uploaded_ids[partner]}")
 
+                        partner_cid = self.uploaded_ids[partner]
+                        partner_model = self.uploaded_models[partner]
+                        client_obj = next(c for c in self.clients if c.id == cid)
+                        client_obj.set_exchange_model(partner_model.state_dict())
+                        print(f"[DCPFL] set exchange model for client {cid} from client {partner_cid}")
+            
+            for c in self.clients:                                                                      
+                if hasattr(c, "has_exchange") and c.has_exchange:                                       
+                    new_sd = {}                                                                         
+                    per_sd = {k: v.detach().cpu() for k, v in c.model_per.state_dict().items()}         
+                    ex_sd  = {k: v.detach().cpu() for k, v in c.model_ex.state_dict().items()           
+                             if k in per_sd}                                                            
+                    for k in per_sd:                                                                    
+                        if k in ex_sd and per_sd[k].shape == ex_sd[k].shape:                            
+                            new_sd[k] = 0.5 * per_sd[k] + 0.5 * ex_sd[k]                                
+                        else:                                                                           
+                            new_sd[k] = per_sd[k]                                                       
+                    c.model_per.load_state_dict(new_sd, strict=False)   
             self.aggregate_parameters()
 
             if self.dlg_eval and i % self.dlg_gap == 0:
@@ -257,7 +267,7 @@ class DCPFL(Server):
                 total_samples += client.train_samples
                 self.uploaded_ids.append(client.id)
                 self.uploaded_weights.append(client.train_samples)
-                self.uploaded_models.append(client.model)
+                self.uploaded_models.append(client.model_per)
                 per_class.append(client.sample_per_class)
 
         if len(self.uploaded_ids) == 0:
