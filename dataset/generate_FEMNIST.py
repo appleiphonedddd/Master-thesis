@@ -11,13 +11,9 @@ import matplotlib.pyplot as plt
 
 random.seed(1)
 np.random.seed(1)
-
-# Default settings (mirror the TinyImageNet generator's style)
 num_clients = 20
 dir_path = "FEMNIST/"
 
-# --- Hotfix for broken EMNIST URL in older torchvision ---
-# Older torchvision points to https://www.itl.nist.gov/iaui/vip/cs_links/EMNIST/gzip.zip
 # which now redirects to homepage and breaks MD5 check. New canonical mirror:
 # https://biometrics.nist.gov/cs_links/EMNIST/gzip.zip  (same MD5)
 try:
@@ -39,8 +35,6 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
     if check(config_path, train_path, test_path, num_clients, niid, balance, partition):
         return
 
-    # ----- Get raw data (EMNIST 'byclass' ~= FEMNIST label space, 62 classes) -----
-    # Note: We avoid DataLoader(batch_size=len(...)) to reduce peak RAM. EMNIST exposes tensors directly.
     transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.1307,), (0.3081,))
@@ -48,24 +42,20 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
 
     raw_root = os.path.join(dir_path, "rawdata")
 
-    # Download both train and test
     trainset = torchvision.datasets.EMNIST(root=raw_root, split="byclass", train=True, download=True, transform=transform)
     testset  = torchvision.datasets.EMNIST(root=raw_root, split="byclass", train=False, download=True, transform=transform)
 
-    # Access raw tensors directly (uint8 for images before transform; labels are LongTensor)
-    train_imgs = trainset.data.numpy()    # shape [N, 28, 28], dtype=uint8
-    train_lbls = trainset.targets.numpy() # shape [N]
+    train_imgs = trainset.data.numpy()    
+    train_lbls = trainset.targets.numpy()
     test_imgs  = testset.data.numpy()
     test_lbls  = testset.targets.numpy()
 
-    # Merge original train/test to a single pool (later split per client via dataset_utils.split_data)
     dataset_image = np.concatenate([train_imgs, test_imgs], axis=0)
     dataset_label = np.concatenate([train_lbls, test_lbls], axis=0)
 
     num_classes = len(set(dataset_label.tolist()))
     print(f"Number of classes: {num_classes}")
 
-    # For FEMNIST (62 classes), keep class_per_client aligned with TinyImageNet script style
     class_per_client = min(20, num_classes)
 
     X, y, statistic = separate_data(
@@ -86,7 +76,6 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
         statistic, niid, balance, partition
     )
 
-    # ----- Visualization: per-client class distribution (train/test) -----
     rows = (num_clients + 3) // 4
     fig, axes = plt.subplots(rows, 4, figsize=(4 * 4, 3 * rows))
     axes = axes.flatten()
@@ -118,8 +107,6 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
 
 
 if __name__ == "__main__":
-    # CLI identical to TinyImageNet generator:
-    # python generate_FEMNIST.py [noniid|iid] [balance|nobalance] [dir|exdir|pat|-]
     niid = True if sys.argv[1] == "noniid" else False
     balance = True if sys.argv[2] == "balance" else False
     partition = sys.argv[3] if sys.argv[3] != "-" else None
