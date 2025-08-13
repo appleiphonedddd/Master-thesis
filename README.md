@@ -77,10 +77,11 @@ python main.py -data TinyImagenet -ncl 200 -m CNN -algo FedAvg -gr 100 -did 0
 python main.py -data FashionMNIST -m CNN -algo FedAvg -gr 100 -did 0,1,2,3 # running on multiple GPUs
 ```
 
-4. Accuracy visualization
+4. Accuracy and Loss visualization
 
 ```sh
 python plot_accuracy.py path_to_csv  path_to_csv
+python plot_loss.py path_to_csv  path_to_csv
 ```
 
 ### Extend new algorithms and datasets

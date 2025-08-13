@@ -13,7 +13,6 @@ np.random.seed(1)
 num_clients = 20
 dir_path = "KMNIST/"
 
-
 # Allocate data to users
 def generate_dataset(dir_path, num_clients, niid, balance, partition):
     if not os.path.exists(dir_path):

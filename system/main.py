@@ -386,13 +386,22 @@ def run(args):
         server.train()
 
         if hasattr(server, 'rs_test_acc') and len(server.rs_test_acc) > 0:
-            df = pd.DataFrame({
+            df_acc = pd.DataFrame({
                 'round': list(range(len(server.rs_test_acc))),
                 'test_acc': server.rs_test_acc,
             })
             csv_name = f"{args.algorithm}_run{i}_rs_test_acc.csv"
-            df.to_csv(csv_name, index=False)
+            df_acc.to_csv(csv_name, index=False)
             print(f"[Info] Saved per-round test accuracy for {args.algorithm} run {i} to {csv_name}")
+        
+        if hasattr(server, 'rs_train_loss') and len(server.rs_train_loss) > 0:
+            df_loss = pd.DataFrame({
+                'round': list(range(len(server.rs_train_loss))),
+                'train_loss': server.rs_train_loss,
+            })
+            csv_name = f"{args.algorithm}_run{i}_rs_train_loss.csv"
+            df_loss.to_csv(csv_name, index=False)
+            print(f"[Info] Saved per-round train loss for {args.algorithm} run {i} to {csv_name}")
         time_list.append(time.time()-start)
 
     print(f"\nAverage time cost: {round(np.average(time_list), 2)}s.")

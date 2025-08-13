@@ -88,7 +88,11 @@ class DCPFL(Server):
 
         # record historical loss for each client
         self.loss_history = {i: [] for i in range(self.num_clients)}
-        # record time cost for each round
+        
+        # cooldown settings for exchange
+        self.exchange_cooldown = getattr(self.args, 'exchange_cooldown', 10)
+        self.last_ex_round = {i: -10**9 for i in range(self.num_clients)}
+# record time cost for each round
         self.Budget = []
 
         self.embed_mode = getattr(self.args, "embed_mode", "hybrid")
@@ -133,6 +137,7 @@ class DCPFL(Server):
             return eps, minpts
         
         for i in range(self.global_rounds + 1):
+            self.cur_round = i
             start_time = time.time()
 
             self.selected_clients = self.select_clients()
@@ -190,7 +195,8 @@ class DCPFL(Server):
                 history = self.loss_history[cid]
                 if len(history) >= 3:
                     wma = (0.1 * history[-3] + 0.1 * history[-2] + 0.8 * history[-1])
-                    if history[-1] < wma:
+                    cooldown_ok = (i - self.last_ex_round[cid]) >= self.exchange_cooldown
+                    if history[-1] < wma and cooldown_ok:
                         same_cluster = [j for j, lab in enumerate(labels) if lab == labels[idx] and j != idx]
                         partner = random.choice(same_cluster) if same_cluster else random.choice(
                             [j for j in range(len(labels)) if j != idx]
@@ -202,17 +208,17 @@ class DCPFL(Server):
                         client_obj.set_exchange_model(partner_model.state_dict())
                         print(f"[DCPFL] set exchange model for client {cid} from client {partner_cid}")
             
-            for c in self.clients:                                                                      
-                if hasattr(c, "has_exchange") and c.has_exchange:                                       
-                    new_sd = {}                                                                         
-                    per_sd = {k: v.detach().cpu() for k, v in c.model_per.state_dict().items()}         
-                    ex_sd  = {k: v.detach().cpu() for k, v in c.model_ex.state_dict().items()           
-                             if k in per_sd}                                                            
-                    for k in per_sd:                                                                    
-                        if k in ex_sd and per_sd[k].shape == ex_sd[k].shape:                            
-                            new_sd[k] = 0.5 * per_sd[k] + 0.5 * ex_sd[k]                                
-                        else:                                                                           
-                            new_sd[k] = per_sd[k]                                                       
+            for c in self.clients:                                                                      # ### NEW
+                if hasattr(c, "has_exchange") and c.has_exchange:                                       # ### NEW
+                    new_sd = {}                                                                         # ### NEW
+                    per_sd = {k: v.detach().cpu() for k, v in c.model_per.state_dict().items()}         # ### NEW
+                    ex_sd  = {k: v.detach().cpu() for k, v in c.model_ex.state_dict().items()           # ### NEW
+                             if k in per_sd}                                                            # ### NEW
+                    for k in per_sd:                                                                    # ### NEW
+                        if k in ex_sd and per_sd[k].shape == ex_sd[k].shape:                            # ### NEW
+                            new_sd[k] = 0.5 * per_sd[k] + 0.5 * ex_sd[k]                                # ### NEW
+                        else:                                                                           # ### NEW
+                            new_sd[k] = per_sd[k]                                                       # ### NEW
                     c.model_per.load_state_dict(new_sd, strict=False)   
             self.aggregate_parameters()
 
@@ -228,6 +234,7 @@ class DCPFL(Server):
 
         print("\nBest accuracy.")
         print(max(self.rs_test_acc))
+        self.last_ex_round[cid] = i
         print("\nAverage time cost per round.")
         print(sum(self.Budget[1:]) / len(self.Budget[1:]))
 

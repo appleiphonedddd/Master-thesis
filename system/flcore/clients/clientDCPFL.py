@@ -7,6 +7,16 @@ from flcore.clients.clientbase import Client
 from sklearn.preprocessing import label_binarize
 from sklearn import metrics
 
+def _safe_logits(model, x):
+    """Supports both (base/head) and single forward models."""
+    if hasattr(model, "base") and hasattr(model, "head"):
+        h = model.base(x)
+        return model.head(h)
+    return model(x)
+
+def _stable_logits(z):
+    """Row-wise max-shift to avoid overflow in softmax/KL."""
+    return z - z.max(dim=1, keepdim=True).values
 class clientDCPFL(Client):
     def __init__(self, args, id, train_samples, test_samples, **kwargs):
         super().__init__(args, id, train_samples, test_samples, **kwargs)
@@ -38,20 +48,27 @@ class clientDCPFL(Client):
                 self.sample_per_class[yy.item()] += 1
         print(self.sample_per_class.int())
 
-    def set_exchange_model(self, state_dict):                                   
-        """Receive partner's personalized weights from server (exchange model).""" 
-        try:                                                                        
-            self.model_ex.load_state_dict(state_dict, strict=True)                  
-        except Exception:                                                           
-            self.model_ex.load_state_dict(state_dict, strict=False)                 
+        # ensure all branches on the same device
+        for m in (self.model, self.model_per, self.model_ex):
+            m.to(self.device)
+
+    def set_exchange_model(self, state_dict):                                    # ### NEW
+        """Receive partner's personalized weights from server (exchange model).""" # ### NEW
+        try:                                                                        # ### NEW
+            self.model_ex.load_state_dict(state_dict, strict=True)                  # ### NEW
+        except Exception:                                                           # ### NEW
+            self.model_ex.load_state_dict(state_dict, strict=False)                 # ### NEW
         self.has_exchange = True 
 
-    def train(self):                                                                
-        trainloader = self.load_train_data()                                        
-        start_time = time.time()                                                    
-                                                                                    
-        # switch to train mode                                                      
-        self.model.train()                                                          
+        # ensure exchange model on correct device
+        self.model_ex.to(self.device)
+
+    def train(self):
+        trainloader = self.load_train_data()
+        start_time = time.time()
+
+        # switch to train mode
+        self.model.train()
         self.model_per.train()                                                      
         if hasattr(self, 'model_ex'):                                               
             self.model_ex.train()                                                   
@@ -62,12 +79,13 @@ class clientDCPFL(Client):
                                                                                     
         for _ in range(epochs):                                                     
             for x, y in trainloader:                                                
-                x = x[0].to(self.device) if isinstance(x, list) else x.to(self.device)
-                y = y.to(self.device)                                              
+                x = x[0].to(self.device) if isinstance(x, list) else x.to(self.device)  
+                y = y.to(self.device)                                               
                 if self.train_slow:                                                 
                     time.sleep(0.1 * np.abs(np.random.rand()))                      
-                                                                                                                            
-                self.optimizer.zero_grad()                                         
+                                                                                    
+                # CE                                          
+                self.optimizer.zero_grad()                                          
                 out_g = self.model(x)                                               
                 loss_g = self.loss(out_g, y)                                        
                 loss_g.backward()                                                   
@@ -75,47 +93,56 @@ class clientDCPFL(Client):
                                                                                     
                 # DML
                 if getattr(self, "has_exchange", False):
-                    rep_p = self.model_per.base(x)
-                    out_p = self.model_per.head(rep_p)
-                    rep_e = self.model_ex.base(x)
-                    out_e = self.model_ex.head(rep_e)
+                    out_p = _safe_logits(self.model_per, x)
+                    out_e = _safe_logits(self.model_ex,  x)
 
-                    ce_p = self.loss(out_p, y)
-                    ce_e = self.loss(out_e, y)
+                    logits_p = _stable_logits(out_p)
+                    logits_e = _stable_logits(out_e)
 
-    
-                    logp = F.log_softmax(out_p, dim=1)
-                    t_e  = F.softmax(out_e, dim=1).detach()
-                    loge = F.log_softmax(out_e, dim=1)
-                    t_p  = F.softmax(out_p, dim=1).detach()
+                    ce_p = self.loss(logits_p, y)
+                    ce_e = self.loss(logits_e, y)
 
-                    kl_pe = F.kl_div(logp, t_e, reduction='batchmean')
-                    kl_ep = F.kl_div(loge, t_p, reduction='batchmean')
+                    logp = F.log_softmax(logits_p, dim=1)
+                    t_e  = F.softmax    (logits_e.detach(), dim=1)
+                    loge = F.log_softmax(logits_e, dim=1)
+                    t_p  = F.softmax    (logits_p.detach(), dim=1)
 
-                    loss_p = ce_p + kl_pe
-                    loss_e = ce_e + kl_ep
+                    loss_p = ce_p + F.kl_div(logp, t_e, reduction='batchmean')
+                    loss_e = ce_e + F.kl_div(loge, t_p, reduction='batchmean')
+
+                    if not torch.isfinite(loss_p) or not torch.isfinite(loss_e):
+                        continue
 
                     self.optimizer_per.zero_grad()
-                    self.optimizer_ex.zero_grad()
                     loss_p.backward()
-                    loss_e.backward()
+                    torch.nn.utils.clip_grad_norm_(self.model_per.parameters(), 5.0)
                     self.optimizer_per.step()
+
+                    self.optimizer_ex.zero_grad()
+                    loss_e.backward()
+                    torch.nn.utils.clip_grad_norm_(self.model_ex.parameters(), 5.0)
                     self.optimizer_ex.step()
                 else:
                     self.optimizer_per.zero_grad()
-                    rep_p = self.model_per.base(x)
-                    out_p = self.model_per.head(rep_p)
-                    loss_p = self.loss(out_p, y)
+                    out_p = _safe_logits(self.model_per, x)
+                    logits_p = _stable_logits(out_p)
+                    loss_p = self.loss(logits_p, y)
+                    if not torch.isfinite(loss_p):
+                        continue
                     loss_p.backward()
+                    torch.nn.utils.clip_grad_norm_(self.model_per.parameters(), 5.0)
                     self.optimizer_per.step()
 
                 if hasattr(self, "alpha_update"):
                     self.alpha_update()
-                  
+
         for idx, (p_per, p_glob) in enumerate(                                  
                 zip(self.model_per.parameters(), self.model.parameters())):          
             p_per.data = (1 - self.alpha[idx]) * p_glob.data + self.alpha[idx] * p_per.data
                                                                                     
+        # update timing stats
+        if hasattr(self, 'scheduler_per') and self.scheduler_per is not None:
+            self.scheduler_per.step()
         self.train_time_cost['num_rounds'] += 1
         self.train_time_cost['total_cost'] += time.time() - start_time
 
@@ -172,23 +199,17 @@ class clientDCPFL(Client):
     def alpha_update(self):
         for idx, (gl, gp) in enumerate(zip(self.model.parameters(),
                                        self.model_per.parameters())):
-        
             if gp.grad is None or gl.grad is None:
                 continue
 
-        
             diff = (gp.detach() - gl.detach()).reshape(-1)
             grad = (self.alpha[idx] * gp.grad.detach() +
                     (1.0 - self.alpha[idx]) * gl.grad.detach()).reshape(-1)
 
-       
             grad_alpha = float((diff * grad).sum().item())
         
             grad_alpha += 0.01 * float(self.alpha[idx])
 
-        
             new_alpha = float(self.alpha[idx]) - float(self.learning_rate) * grad_alpha
 
-        
             self.alpha[idx] = max(0.0, min(1.0, new_alpha))
-
