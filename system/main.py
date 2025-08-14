@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import copy
 import torch
+import torch.nn as nn  # FIX: was missing; used for nn.Identity etc.
 import argparse
 import os
 import time
@@ -98,7 +99,6 @@ def run(args):
                 args.model = FedAvgCNN(in_features=3, num_classes=args.num_classes, dim=1600).to(args.device)
             elif "Omniglot" in args.dataset:
                 args.model = FedAvgCNN(in_features=1, num_classes=args.num_classes, dim=33856).to(args.device)
-                # args.model = CifarNet(num_classes=args.num_classes).to(args.device)
             elif "Digit5" in args.dataset:
                 args.model = Digit5CNN().to(args.device)
             else:
@@ -114,12 +114,6 @@ def run(args):
         
         elif model_str == "ResNet18":
             args.model = torchvision.models.resnet18(pretrained=False, num_classes=args.num_classes).to(args.device)
-            
-            # args.model = torchvision.models.resnet18(pretrained=True).to(args.device)
-            # feature_dim = list(args.model.fc.parameters())[0].shape[1]
-            # args.model.fc = nn.Linear(feature_dim, args.num_classes).to(args.device)
-            
-            # args.model = resnet18(num_classes=args.num_classes, has_bn=True, bn_block_num=4).to(args.device)
         
         elif model_str == "ResNet10":
             args.model = resnet10(num_classes=args.num_classes).to(args.device)
@@ -129,25 +123,13 @@ def run(args):
 
         elif model_str == "AlexNet":
             args.model = alexnet(pretrained=False, num_classes=args.num_classes).to(args.device)
-            
-            # args.model = alexnet(pretrained=True).to(args.device)
-            # feature_dim = list(args.model.fc.parameters())[0].shape[1]
-            # args.model.fc = nn.Linear(feature_dim, args.num_classes).to(args.device)
-            
+
         elif model_str == "GoogleNet":
             args.model = torchvision.models.googlenet(pretrained=False, aux_logits=False, 
                                                       num_classes=args.num_classes).to(args.device)
-            
-            # args.model = torchvision.models.googlenet(pretrained=True, aux_logits=False).to(args.device)
-            # feature_dim = list(args.model.fc.parameters())[0].shape[1]
-            # args.model.fc = nn.Linear(feature_dim, args.num_classes).to(args.device)
 
         elif model_str == "MobileNet":
             args.model = mobilenet_v2(pretrained=False, num_classes=args.num_classes).to(args.device)
-            
-            # args.model = mobilenet_v2(pretrained=True).to(args.device)
-            # feature_dim = list(args.model.fc.parameters())[0].shape[1]
-            # args.model.fc = nn.Linear(feature_dim, args.num_classes).to(args.device)
             
         elif model_str == "LSTM":
             args.model = LSTMNet(hidden_dim=args.feature_dim, vocab_size=args.vocab_size, num_classes=args.num_classes).to(args.device)
@@ -530,6 +512,34 @@ if __name__ == "__main__":
     parser.add_argument('-ca', "--fedcross_alpha", type=float, default=0.99)
     parser.add_argument('-cmss', "--collaberative_model_select_strategy", type=int, default=1)
 
+    # DCPFL
+    parser.add_argument('-excd', "--exchange_cooldown", type=int, default=10,
+                        help="Min rounds between two exchanges for the same client")
+    parser.add_argument('-em', "--embed_mode", type=str, default="hybrid",
+                        choices=["hybrid", "layerstats", "countsketch"],
+                        help="Embedding mode for clustering")
+    parser.add_argument('-edim', "--embed_dim", type=int, default=512,
+                        help="CountSketch dimension (if used)")
+    parser.add_argument('-eseed', "--embed_seed", type=int, default=42,
+                        help="Embedding hash seed")
+    parser.add_argument('-dbseps', "--dbscan_eps", type=float, default=0.75,
+                        help="DBSCAN eps")
+    parser.add_argument('-dbsmin', "--dbscan_minpts", type=int, default=5,
+                        help="DBSCAN minPts")
+    parser.add_argument('-exmix', "--exchange_mix", type=float, default=0.5,
+                        help="Mix ratio between personal/exchange models after pairing")
+    parser.add_argument('-alr', "--alpha_lr", type=float, default=0.01,
+                        help="Learning rate for alpha interpolation parameters")
+    parser.add_argument('-aug', "--alpha_update_gap", type=int, default=0,
+                        help="If >0, update alpha every N minibatches; 0 disables alpha_update")
+    parser.add_argument('-tsoft', "--kd_temperature", type=float, default=1.0,
+                        help="Temperature for DML KL divergence")
+    parser.add_argument('-neb', "--no_exchange_before", type=int, default=150,
+                        help="Global rounds to always skip exchange (burn-in)")
+    parser.add_argument('-www', "--wma_window", type=int, default=20,
+                        help="Window size for WMA-based stability check")
+    parser.add_argument('-weps', "--wma_eps", type=float, default=0.01,
+                        help="Mean relative |Δloss| threshold to deem 'stable' (e.g., 0.01 = 1%)")
 
     args = parser.parse_args()
 
@@ -544,16 +554,4 @@ if __name__ == "__main__":
         print(arg, '=',getattr(args, arg))
     print("=" * 50)
 
-    # with torch.profiler.profile(
-    #     activities=[
-    #         torch.profiler.ProfilerActivity.CPU,
-    #         torch.profiler.ProfilerActivity.CUDA],
-    #     profile_memory=True, 
-    #     on_trace_ready=torch.profiler.tensorboard_trace_handler('./log')
-    #     ) as prof:
-    # with torch.autograd.profiler.profile(profile_memory=True) as prof:
     run(args)
-
-    
-    # print(prof.key_averages().table(sort_by="cpu_time_total", row_limit=20))
-    # print(f"\nTotal time cost: {round(time.time()-total_start, 2)}s.")

@@ -22,7 +22,6 @@ def _flatten_params_cpu_f32(model):
 def _delta_vec(global_model, client_model):
     g = _flatten_params_cpu_f32(global_model)
     c = _flatten_params_cpu_f32(client_model)
-    
     return c - g
 
 def _hash32(x, seed):
@@ -90,50 +89,42 @@ class DCPFL(Server):
         self.loss_history = {i: [] for i in range(self.num_clients)}
         
         # cooldown settings for exchange
-        self.exchange_cooldown = getattr(self.args, 'exchange_cooldown', 10)
+        self.exchange_cooldown = int(getattr(self.args, 'exchange_cooldown', 10))
         self.last_ex_round = {i: -10**9 for i in range(self.num_clients)}
-# record time cost for each round
+
+        # track time cost for each round
         self.Budget = []
 
         self.embed_mode = getattr(self.args, "embed_mode", "hybrid")
         self.embed_dim = int(getattr(self.args, "embed_dim", 512))
         self.embed_seed = int(getattr(self.args, "embed_seed", 42))
 
+        self.exchange_mix = float(getattr(self.args, "exchange_mix", 0.5))
+
     def train(self):
         def get_dbscan_hparams(args):
-            if hasattr(args, 'eps'):
-                eps = args.eps
-            elif hasattr(args, 'dbscan_eps'):
-                eps = args.dbscan_eps
-            else:
-                eps = 0.75
-
-            if hasattr(args, 'minpts'):
-                minpts = args.minpts
-            elif hasattr(args, 'dbscan_minpts'):
-                minpts = args.dbscan_minpts
-            else:
-                minpts = 5
-
+            eps = getattr(args, 'eps', None)
+            if eps is None:
+                eps = getattr(args, 'dbscan_eps', 0.75)
+            minpts = getattr(args, 'minpts', None)
+            if minpts is None:
+                minpts = getattr(args, 'dbscan_minpts', 5)
             try:
                 eps = float(eps)
             except Exception:
                 print(f"[WARN] Invalid eps={eps}, fallback to 0.75")
                 eps = 0.75
-
             try:
                 minpts = int(minpts)
             except Exception:
                 print(f"[WARN] Invalid minpts={minpts}, fallback to 5")
                 minpts = 5
-
             if eps <= 0:
                 print(f"[WARN] eps <= 0 ({eps}), force to 0.75")
                 eps = 0.75
             if minpts < 1:
                 print(f"[WARN] minpts < 1 ({minpts}), force to 5")
                 minpts = 5
-
             return eps, minpts
         
         for i in range(self.global_rounds + 1):
@@ -155,7 +146,6 @@ class DCPFL(Server):
 
             if len(getattr(self, "uploaded_models", [])) == 0:
                 print("[WARN] No active clients uploaded this round. Skip clustering/aggregation.")
-                
                 elapsed = time.time() - start_time
                 self.Budget.append(elapsed)
                 print('-' * 25, 'time cost', '-' * 25, elapsed)
@@ -163,6 +153,7 @@ class DCPFL(Server):
 
             eps, minpts = get_dbscan_hparams(self.args)
 
+            # build embeddings
             features = []
             for model in self.uploaded_models:
                 z = _update_embedding(
@@ -174,7 +165,6 @@ class DCPFL(Server):
                 )
                 features.append(z.astype(np.float32))
             X = np.vstack(features)
-            
             X = StandardScaler().fit_transform(X)
 
             if len(self.uploaded_models) < max(2, minpts):
@@ -182,10 +172,15 @@ class DCPFL(Server):
             else:
                 clustering = DBSCAN(eps=eps, min_samples=minpts, metric="euclidean").fit(X)
                 labels = clustering.labels_
-                
                 if (labels == -1).all() or (len(set(labels)) <= 1):
                     print("[INFO] DBSCAN returned <=1 cluster or all outliers; fallback to single cluster.")
                     labels = np.zeros(len(self.uploaded_models), dtype=int)
+
+            no_exchange_before = int(getattr(self.args, 'no_exchange_before', 150))
+            wma_window = int(getattr(self.args, 'wma_window', 20))
+            wma_eps = float(getattr(self.args, 'wma_eps', 0.01))
+            if wma_window < 3:
+                wma_window = 3
 
             for idx, cid in enumerate(self.uploaded_ids):
                 client = next(c for c in self.clients if c.id == cid)
@@ -193,33 +188,49 @@ class DCPFL(Server):
                 self.loss_history[cid].append(loss)
 
                 history = self.loss_history[cid]
-                if len(history) >= 3:
-                    wma = (0.1 * history[-3] + 0.1 * history[-2] + 0.8 * history[-1])
-                    cooldown_ok = (i - self.last_ex_round[cid]) >= self.exchange_cooldown
-                    if history[-1] < wma and cooldown_ok:
-                        same_cluster = [j for j, lab in enumerate(labels) if lab == labels[idx] and j != idx]
-                        partner = random.choice(same_cluster) if same_cluster else random.choice(
-                            [j for j in range(len(labels)) if j != idx]
-                        )
-
-                        partner_cid = self.uploaded_ids[partner]
-                        partner_model = self.uploaded_models[partner]
-                        client_obj = next(c for c in self.clients if c.id == cid)
-                        client_obj.set_exchange_model(partner_model.state_dict())
-                        print(f"[DCPFL] set exchange model for client {cid} from client {partner_cid}")
+                
+                if i < no_exchange_before:
+                    continue
+                
+                if len(history) < wma_window:
+                    continue
+               
+                recent = np.array(history[-wma_window:], dtype=np.float64)
+                weights = np.arange(1, wma_window + 1, dtype=np.float64)
+                wma = float(np.sum(recent * weights) / np.sum(weights))
+               
+                diffs = np.diff(recent)
+                denom = float(max(1e-8, np.mean(recent)))
+                rel_slope = float(np.mean(np.abs(diffs)) / denom)
+                cooldown_ok = (i - self.last_ex_round[cid]) >= self.exchange_cooldown
+                # Gate: current loss below WMA, window stable, and cooldown passed
+                if (history[-1] < wma) and (rel_slope < wma_eps) and cooldown_ok:
+                    same_cluster = [j for j, lab in enumerate(labels) if lab == labels[idx] and j != idx]
+                    partner = random.choice(same_cluster) if same_cluster else random.choice(
+                        [j for j in range(len(labels)) if j != idx]
+                    )
+                    partner_cid = self.uploaded_ids[partner]
+                    partner_model = self.uploaded_models[partner]
+                    client_obj = next(c for c in self.clients if c.id == cid)
+                    client_obj.set_exchange_model(partner_model.state_dict(), exchanged_round=i)
+                    self.last_ex_round[cid] = i  # cooldown updates immediately on match
+                    print(f"[DCPFL] set exchange model for client {cid} from client {partner_cid} at round {i} (stable={rel_slope:.4f} < eps={wma_eps}, loss={history[-1]:.4f} < WMA={wma:.4f})")
+                    print(f"[DCPFL] set exchange model for client {cid} from client {partner_cid} at round {i}")
             
-            for c in self.clients:                                                                      # ### NEW
-                if hasattr(c, "has_exchange") and c.has_exchange:                                       # ### NEW
-                    new_sd = {}                                                                         # ### NEW
-                    per_sd = {k: v.detach().cpu() for k, v in c.model_per.state_dict().items()}         # ### NEW
-                    ex_sd  = {k: v.detach().cpu() for k, v in c.model_ex.state_dict().items()           # ### NEW
-                             if k in per_sd}                                                            # ### NEW
-                    for k in per_sd:                                                                    # ### NEW
-                        if k in ex_sd and per_sd[k].shape == ex_sd[k].shape:                            # ### NEW
-                            new_sd[k] = 0.5 * per_sd[k] + 0.5 * ex_sd[k]                                # ### NEW
-                        else:                                                                           # ### NEW
-                            new_sd[k] = per_sd[k]                                                       # ### NEW
-                    c.model_per.load_state_dict(new_sd, strict=False)   
+            # one-time mixing on newly exchanged clients of this round
+            for c in self.clients:
+                # mix only for clients that *just* exchanged in this round
+                if getattr(c, "has_exchange", False) and getattr(c, "_exchanged_round", -1) == i:
+                    new_sd = {}
+                    per_sd = {k: v.detach().cpu() for k, v in c.model_per.state_dict().items()}
+                    ex_sd  = {k: v.detach().cpu() for k, v in c.model_ex.state_dict().items() if k in per_sd}
+                    for k in per_sd:
+                        if k in ex_sd and per_sd[k].shape == ex_sd[k].shape:
+                            new_sd[k] = (1.0 - self.exchange_mix) * per_sd[k] + self.exchange_mix * ex_sd[k]
+                        else:
+                            new_sd[k] = per_sd[k]
+                    c.model_per.load_state_dict(new_sd, strict=False)
+            # aggregate personalized models
             self.aggregate_parameters()
 
             if self.dlg_eval and i % self.dlg_gap == 0:
@@ -233,10 +244,12 @@ class DCPFL(Server):
                 break
 
         print("\nBest accuracy.")
-        print(max(self.rs_test_acc))
-        self.last_ex_round[cid] = i
+        print(max(self.rs_test_acc) if len(self.rs_test_acc) else "N/A")
         print("\nAverage time cost per round.")
-        print(sum(self.Budget[1:]) / len(self.Budget[1:]))
+        if len(self.Budget) > 1:
+            print(sum(self.Budget[1:]) / len(self.Budget[1:]))
+        else:
+            print("N/A")
 
         self.save_results()
         self.save_global_model()
@@ -274,6 +287,7 @@ class DCPFL(Server):
                 total_samples += client.train_samples
                 self.uploaded_ids.append(client.id)
                 self.uploaded_weights.append(client.train_samples)
+                # upload personalized models for aggregation
                 self.uploaded_models.append(client.model_per)
                 per_class.append(client.sample_per_class)
 
@@ -285,13 +299,12 @@ class DCPFL(Server):
         if total_samples > 0:
             self.uploaded_weights = [w / total_samples for w in self.uploaded_weights]
         else:
-            
             avg_w = 1.0 / len(self.uploaded_weights)
             self.uploaded_weights = [avg_w for _ in self.uploaded_weights]
         
         self.uploaded_samples = []
         self.uploaded_class_weight = []
-        per_class = np.asarray(per_class, dtype=np.float32)  # shape: [num_active, num_classes]
+        per_class = np.asarray(per_class, dtype=np.float32)
 
         for c in range(self.num_classes):
             class_weights = per_class[:, c] if per_class.size > 0 else np.array([], dtype=np.float32)
@@ -300,7 +313,6 @@ class DCPFL(Server):
             if s > 0 and class_weights.size > 0:
                 self.uploaded_class_weight.append(class_weights / s)
             else:
-                
                 if class_weights.size > 0:
                     self.uploaded_class_weight.append(
                         np.full_like(class_weights, 1.0 / len(class_weights), dtype=np.float32)
