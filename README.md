@@ -68,9 +68,13 @@ cd system/
 
 python main.py -data FashionMNIST -m CNN -algo FedAvg -gr 100 -did 0 # using the FashionMNIST dataset, the FedAvg algorithm, and the 4-layer CNN model, communication round 100 and single GPU
 
+python main.py -data MNIST -m CNN -algo FedAvg -gr 100 -did 0
+
 python main.py -data Cifar10 -m CNN -algo FedAvg -gr 100 -did 0
 
 python main.py -data Cifar100 -ncl 100 -m CNN -algo FedAvg -gr 100 -did 0
+
+python main.py -data MiniImagenet -ncl 64 -m CNN -algo FedAvg -gr 100 -did 0
 
 python main.py -data TinyImagenet -ncl 200 -m CNN -algo FedAvg -gr 100 -did 0
 
@@ -83,6 +87,8 @@ python main.py -data FashionMNIST -m CNN -algo FedAvg -gr 100 -did 0,1,2,3 # run
 python plot_accuracy.py path_to_csv  path_to_csv --smooth 5
 python plot_loss.py path_to_csv  path_to_csv --smooth 5
 ```
+
+For instance
 
 ```sh
 python plot_accuracy.py practical/Cifar10/Acc/FedAS.csv practical/Cifar10/Acc/FedAvg.csv practical/Cifar10/Acc/FedDodm.csv practical/Cifar10/Acc/DCPFL.csv --smooth 5
