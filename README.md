@@ -80,8 +80,14 @@ python main.py -data FashionMNIST -m CNN -algo FedAvg -gr 100 -did 0,1,2,3 # run
 4. Accuracy and Loss visualization
 
 ```sh
-python plot_accuracy.py path_to_csv  path_to_csv
-python plot_loss.py path_to_csv  path_to_csv
+python plot_accuracy.py path_to_csv  path_to_csv --smooth 5
+python plot_loss.py path_to_csv  path_to_csv --smooth 5
+```
+
+```sh
+python plot_accuracy.py practical/Cifar10/Acc/FedAS.csv practical/Cifar10/Acc/FedAvg.csv practical/Cifar10/Acc/FedDodm.csv practical/Cifar10/Acc/DCPFL.csv --smooth 5
+
+python plot_loss.py practical/Cifar10/Loss/FedAS.csv practical/Cifar10/Loss/FedAvg.csv practical/Cifar10/Loss/FedDodm.csv practical/Cifar10/Loss/DCPFL.csv --smooth 5
 ```
 
 ### Extend new algorithms and datasets
