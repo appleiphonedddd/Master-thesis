@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import copy
 import torch
-import torch.nn as nn  # FIX: was missing; used for nn.Identity etc.
+import torch.nn as nn
 import argparse
 import os
 import time
@@ -71,7 +71,6 @@ logger.setLevel(logging.ERROR)
 warnings.simplefilter("ignore")
 torch.manual_seed(0)
 
-
 def run(args):
 
     time_list = []
@@ -101,6 +100,8 @@ def run(args):
                 args.model = FedAvgCNN(in_features=1, num_classes=args.num_classes, dim=33856).to(args.device)
             elif "Digit5" in args.dataset:
                 args.model = Digit5CNN().to(args.device)
+            elif "MiniImagenet" in args.dataset:
+                args.model = FedAvgCNN(in_features=3, num_classes=args.num_classes, dim=20736).to(args.device)
             else:
                 args.model = FedAvgCNN(in_features=3, num_classes=args.num_classes, dim=10816).to(args.device)
 
@@ -388,14 +389,12 @@ def run(args):
 
     print(f"\nAverage time cost: {round(np.average(time_list), 2)}s.")
     
-
     # Global average
     average_data(dataset=args.dataset, algorithm=args.algorithm, goal=args.goal, times=args.times)
 
     print("All done!")
 
     reporter.report()
-
 
 if __name__ == "__main__":
     total_start = time.time()

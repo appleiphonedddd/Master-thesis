@@ -11,9 +11,13 @@ import matplotlib.pyplot as plt
 random.seed(1)
 np.random.seed(1)
 num_clients = 20
-dir_path = "KMNIST/"
+dir_path = "Food101/"
 
-# Allocate data to users
+def _get_paths_and_labels(ds):
+    image_files = [str(p) for p in ds._image_files]
+    labels = np.array(ds._labels, dtype=np.int64)
+    return image_files, labels
+
 def generate_dataset(dir_path, num_clients, niid, balance, partition):
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
@@ -26,54 +30,30 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
     if check(config_path, train_path, test_path, num_clients, niid, balance, partition):
         return
 
-    # # FIX HTTP Error 403: Forbidden
-    # from six.moves import urllib
-    # opener = urllib.request.build_opener()
-    # opener.addheaders = [('User-agent', 'Mozilla/5.0')]
-    # urllib.request.install_opener(opener)
+    # Get Food101 data
+    transform = transforms.Compose(
+        [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
-    # Get KMNIST data
-    transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize([0.5], [0.5])])
+    trainset = torchvision.datasets.Food101(
+        root=dir_path+"rawdata", split="train", download=True, transform=transform)
+    testset = torchvision.datasets.Food101(
+        root=dir_path+"rawdata", split="test", download=True, transform=transform)
+    
+    train_paths, train_labels = _get_paths_and_labels(trainset)
+    test_paths,  test_labels  = _get_paths_and_labels(testset)
 
-    trainset = torchvision.datasets.KMNIST(
-        root=dir_path+"rawdata", train=True, download=True, transform=transform)
-    testset = torchvision.datasets.KMNIST(
-        root=dir_path+"rawdata", train=False, download=True, transform=transform)
-    trainloader = torch.utils.data.DataLoader(
-        trainset, batch_size=len(trainset.data), shuffle=False)
-    testloader = torch.utils.data.DataLoader(
-        testset, batch_size=len(testset.data), shuffle=False)
-
-    for _, train_data in enumerate(trainloader, 0):
-        trainset.data, trainset.targets = train_data
-    for _, test_data in enumerate(testloader, 0):
-        testset.data, testset.targets = test_data
-
-    dataset_image = []
-    dataset_label = []
-
-    dataset_image.extend(trainset.data.cpu().detach().numpy())
-    dataset_image.extend(testset.data.cpu().detach().numpy())
-    dataset_label.extend(trainset.targets.cpu().detach().numpy())
-    dataset_label.extend(testset.targets.cpu().detach().numpy())
-    dataset_image = np.array(dataset_image)
-    dataset_label = np.array(dataset_label)
+    dataset_image = np.array(train_paths + test_paths, dtype=object)
+    dataset_label = np.concatenate([train_labels, test_labels], axis=0)
 
     num_classes = len(set(dataset_label))
     print(f'Number of classes: {num_classes}')
 
-    # dataset = []
-    # for i in range(num_classes):
-    #     idx = dataset_label == i
-    #     dataset.append(dataset_image[idx])
-
     X, y, statistic = separate_data((dataset_image, dataset_label), num_clients, num_classes, 
-                                    niid, balance, partition, class_per_client=2)
+                                    niid, balance, partition, class_per_client=10)
     train_data, test_data = split_data(X, y)
     save_file(config_path, train_path, test_path, train_data, test_data, num_clients, num_classes, 
         statistic, niid, balance, partition)
-    
-    # Visualize the train & test data distribution of each client and save the figure
+
     rows = (num_clients + 3) // 4
     fig, axes = plt.subplots(rows, 4, figsize=(4 * 4, 3 * rows))
     axes = axes.flatten()

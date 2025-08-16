@@ -13,8 +13,6 @@ np.random.seed(1)
 num_clients = 20
 dir_path = "Cifar100/"
 
-
-# Allocate data to users
 def generate_dataset(dir_path, num_clients, niid, balance, partition):
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
@@ -58,11 +56,6 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
     num_classes = len(set(dataset_label))
     print(f'Number of classes: {num_classes}')
 
-    # dataset = []
-    # for i in range(num_classes):
-    #     idx = dataset_label == i
-    #     dataset.append(dataset_image[idx])
-
     X, y, statistic = separate_data((dataset_image, dataset_label), num_clients, num_classes, 
                                     niid, balance, partition, class_per_client=10)
     train_data, test_data = split_data(X, y)
@@ -99,7 +92,6 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
     os.makedirs(os.path.join(dir_path, 'figures'), exist_ok=True)
     fig.savefig(os.path.join(dir_path, 'figures', 'client_data_distribution.png'))
     plt.close(fig)
-
 
 if __name__ == "__main__":
     niid = True if sys.argv[1] == "noniid" else False

@@ -44,7 +44,7 @@ def main():
         plt.plot(df['round'], series, label=label, color=color)
 
     plt.xlabel('Communication Round')
-    plt.ylabel('Accuracy')
+    plt.ylabel('Loss')
     plt.legend()
     plt.grid(True)
     plt.tight_layout()

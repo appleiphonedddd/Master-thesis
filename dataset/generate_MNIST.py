@@ -13,8 +13,6 @@ np.random.seed(1)
 num_clients = 20
 dir_path = "MNIST/"
 
-
-# Allocate data to users
 def generate_dataset(dir_path, num_clients, niid, balance, partition):
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
@@ -26,12 +24,6 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
 
     if check(config_path, train_path, test_path, num_clients, niid, balance, partition):
         return
-
-    # # FIX HTTP Error 403: Forbidden
-    # from six.moves import urllib
-    # opener = urllib.request.build_opener()
-    # opener.addheaders = [('User-agent', 'Mozilla/5.0')]
-    # urllib.request.install_opener(opener)
 
     # Get MNIST data
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize([0.5], [0.5])])
@@ -62,11 +54,6 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
 
     num_classes = len(set(dataset_label))
     print(f'Number of classes: {num_classes}')
-
-    # dataset = []
-    # for i in range(num_classes):
-    #     idx = dataset_label == i
-    #     dataset.append(dataset_image[idx])
 
     X, y, statistic = separate_data((dataset_image, dataset_label), num_clients, num_classes, 
                                     niid, balance, partition, class_per_client=2)
