@@ -30,12 +30,12 @@ def plot_accuracy(methods, datasets, accuracy):
     print("[Info] Saved accuracy comparison plot without grid to Bar_chart.png")
 
 methods = ['FedAvg', 'FedDodm', 'FedAS', 'DCPFL']
-datasets = ['MNIST', 'FMNIST', 'CIFAR10', 'CIFAR100', 'Tiny-ImageNet']
+datasets = ['MNIST','KMNIST' ,'FMNIST', 'CIFAR10', 'CIFAR100', 'Tiny-ImageNet']
 accuracy = [
-    [98.18, 85.80, 56.68, 32.69, 19.50],  # FedAvg
-    [99.65, 97.57, 89.90, 49.97, 35.50],  # FedDodm
-    [99.68, 97.74, 91.55, 59.62, 40.06],  # FedAS
-    [99.25, 97.36, 89.55, 46.82, 26.92]   # DCPFL
+    [98.18,95.89, 85.80, 56.68, 32.69, 19.50],  # FedAvg
+    [99.65,99.17, 97.57, 89.90, 49.97, 35.50],  # FedDodm
+    [99.68,98.92, 97.74, 91.55, 59.62, 40.06],  # FedAS
+    [99.25,np.nan, 97.36, 89.55, 46.82, 26.92]   # DCPFL
 ]
 
 plot_accuracy(methods, datasets, accuracy)

@@ -70,6 +70,8 @@ python main.py -data FashionMNIST -m CNN -algo FedAvg -gr 100 -did 0 # using the
 
 python main.py -data MNIST -m CNN -algo FedAvg -gr 100 -did 0
 
+python main.py -data KMNIST -m CNN -algo FedAvg -gr 100 -did 0
+
 python main.py -data Cifar10 -m CNN -algo FedAvg -gr 100 -did 0
 
 python main.py -data Cifar100 -ncl 100 -m CNN -algo FedAvg -gr 100 -did 0
