@@ -77,7 +77,7 @@ python main.py -data MiniImagenet -ncl 64 -m CNN -algo FedAvg -gr 100 -did 0
 
 python main.py -data Cifar100 -ncl 100 -m CNN -algo FedAvg -gr 100 -did 0
 
-python main.py -data FGVC_Aircraft -ncl 100 -m CNN -algo FedAS -gr 300 -did 0
+python main.py -data FGVC_Aircraft -ncl 100 -m CNN -algo FedAvg -gr 300 -did 0
 
 python main.py -data Flowers102 -ncl 102 -m CNN -algo FedAvg -gr 100 -did 0
 
