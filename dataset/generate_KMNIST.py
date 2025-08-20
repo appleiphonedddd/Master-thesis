@@ -1,3 +1,43 @@
+"""
+KMNIST federated split generator.
+
+Purpose
+-------
+- Download/prepare KMNIST (10-class, 1×28×28 grayscale).
+- Merge official train/test into a single pool.
+- Partition samples across federated clients (IID / Non-IID variants).
+- Persist per-client train/test splits and a distribution figure.
+
+CLI (consistent with other generators)
+--------------------------------------
+python generate_kmnist.py <iid|noniid> <balance|-> <pat|dir|->
+
+Examples:
+  # IID & balanced across 20 clients
+  python generate_kmnist.py iid balance -
+
+  # Non-IID pathological across 20 clients
+  python generate_kmnist.py noniid - pat
+
+  # Non-IID Dirichlet
+  python generate_kmnist.py noniid - dir
+
+Outputs (side effects)
+----------------------
+KMNIST/
+  ├── config.json
+  ├── train/                 # per-client train tensors/labels
+  ├── test/                  # per-client test tensors/labels
+  └── figures/client_data_distribution.png
+
+Notes
+-----
+- Normalization: mean=std=0.5 → scales to [-1, 1].
+- We load each split in a single DataLoader batch for simplicity.
+  If memory is tight, refactor to chunked loading and concatenate.
+- Design choice: class_per_client=2 to induce label-skew; record it in config.json.
+"""
+
 import numpy as np
 import os
 import sys
@@ -61,7 +101,6 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
     save_file(config_path, train_path, test_path, train_data, test_data, num_clients, num_classes, 
         statistic, niid, balance, partition)
     
-    # Visualize the train & test data distribution of each client and save the figure
     rows = (num_clients + 3) // 4
     fig, axes = plt.subplots(rows, 4, figsize=(4 * 4, 3 * rows))
     axes = axes.flatten()

@@ -1,3 +1,46 @@
+"""
+FGVC-Aircraft federated split generator.
+
+Purpose
+-------
+- Download/prepare the FGVC-Aircraft dataset via torchvision.
+- Merge official train+val+test into a single pool (by reading `trainval` then `test`).
+- Partition samples across federated clients (IID / Non-IID variants).
+- Persist per-client train/test splits and a per-client distribution figure.
+
+CLI (consistent with other generators)
+--------------------------------------
+python generate_fgvc_aircraft.py <iid|noniid> <balance|-> <pat|dir|->
+
+Examples:
+  # IID & balanced across 20 clients
+  python generate_fgvc_aircraft.py iid balance -
+
+  # Non-IID pathological across 20 clients
+  python generate_fgvc_aircraft.py noniid - pat
+
+  # Non-IID Dirichlet
+  python generate_fgvc_aircraft.py noniid - dir
+
+Outputs (side effects)
+----------------------
+FGVC_Aircraft/
+  ├── config.json
+  ├── train/                      # per-client train tensors/labels
+  ├── test/                       # per-client test tensors/labels
+  └── figures/client_data_distribution.png
+
+Notes
+-----
+- Images are resized to 64x64 and normalized to [-1, 1] using mean/std=(0.5, 0.5, 0.5),
+  to keep memory footprint aligned with TinyImageNet generators.
+- We load each split in a single DataLoader batch for simplicity. If you hit OOM,
+  switch to iterative loading and concatenate.
+- `annotation_level="variant"` is used, but the number of classes depends on this level.
+- Design choice: `class_per_client=20` to create moderate label-skew (mirrors TinyImageNet).
+  Record this in config.json for reproducibility.
+"""
+
 import numpy as np
 import os
 import sys
@@ -25,24 +68,20 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
     if check(config_path, train_path, test_path, num_clients, niid, balance, partition):
         return
 
-    # Use torchvision to download official 2013b release under rawdata/
     raw_root = os.path.join(dir_path, "rawdata")
     os.makedirs(raw_root, exist_ok=True)
 
-    # Keep pattern consistent; also ensure fixed size for batching all-at-once
     transform = transforms.Compose([
         transforms.Resize((64, 64)),
         transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])
 
-    # Merge official train+val+test, then we do our own split for FL
     trainval_set = FGVCAircraft(root=raw_root, split="trainval", annotation_level="variant",
                                 download=True, transform=transform)
     test_set     = FGVCAircraft(root=raw_root, split="test", annotation_level="variant",
                                 download=True, transform=transform)
 
-    # Load all samples into memory (matches TinyImageNet pattern)
     tv_loader = torch.utils.data.DataLoader(trainval_set, batch_size=len(trainval_set), shuffle=False)
     te_loader = torch.utils.data.DataLoader(test_set,     batch_size=len(test_set),     shuffle=False)
 
@@ -63,23 +102,19 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
     num_classes = len(set(dataset_label))
     print(f"Number of classes: {num_classes}")
 
-    # Partition to clients
     X, y, statistic = separate_data(
         (dataset_image, dataset_label),
         num_clients, num_classes,
         niid, balance, partition,
-        class_per_client=20  # keep same knob as TinyImageNet script
+        class_per_client=20
     )
 
-    # Client-wise train/test split
     train_data, test_data = split_data(X, y)
 
-    # Persist
     save_file(config_path, train_path, test_path,
               train_data, test_data, num_clients, num_classes,
               statistic, niid, balance, partition)
 
-    # Visualize distribution across clients (same style as TinyImageNet)
     rows = (num_clients + 3) // 4
     fig, axes = plt.subplots(rows, 4, figsize=(4 * 4, 3 * rows))
     axes = axes.flatten()
@@ -110,7 +145,6 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
     plt.close(fig)
 
 if __name__ == "__main__":
-    # CLI pattern kept identical to generate_TinyImagenet.py
     niid = True if sys.argv[1] == "noniid" else False
     balance = True if sys.argv[2] == "balance" else False
     partition = sys.argv[3] if sys.argv[3] != "-" else None

@@ -1,3 +1,50 @@
+"""
+MiniImageNet federated split generator.
+
+Purpose
+-------
+- Download/prepare MiniImageNet pickle files (if absent).
+- Load images/labels from official pickles, normalize to [-1, 1], ensure NCHW.
+- Partition samples across federated clients (IID / Non-IID variants).
+- Persist per-client train/test splits and a per-client distribution figure.
+
+CLI (consistent with other generators)
+--------------------------------------
+python generate_miniimagenet.py <iid|noniid> <balance|-> <pat|dir|->
+
+Examples:
+  # IID & balanced across 20 clients
+  python generate_miniimagenet.py iid balance -
+
+  # Non-IID pathological across 20 clients
+  python generate_miniimagenet.py noniid - pat
+
+  # Non-IID Dirichlet
+  python generate_miniimagenet.py noniid - dir
+
+Outputs (side effects)
+----------------------
+MiniImagenet/
+  ├── config.json
+  ├── train/                       # per-client train tensors/labels
+  ├── test/                        # per-client test tensors/labels
+  └── figures/client_data_distribution.png
+
+Notes
+-----
+- Pickle schema differs across releases; `load_mini_imagenet` handles common keys:
+  ["image_data" | "data" | "images"] and ["class_dict" | "labels" | "targets"].
+- Images are scaled to [0, 1] if values > 1.5, then mapped to [-1, 1] via (x-0.5)/0.5.
+- Channel-last arrays are transposed to NCHW if needed.
+- Design choice: `class_per_client = min(20, num_classes)` for moderate label-skew
+  (parity with TinyImageNet generator). Record this in config.json for reproducibility.
+
+Security/Compliance
+-------------------
+- Dataset is fetched with shell `wget`/`tar` for brevity. In production, prefer
+  Python stdlib (`urllib.request`, `tarfile`) with checksum verification.
+"""
+
 import numpy as np
 import os
 import sys

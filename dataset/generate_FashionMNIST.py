@@ -1,3 +1,43 @@
+"""
+FashionMNIST federated split generator.
+
+Purpose
+-------
+- Download/prepare Fashion-MNIST.
+- Merge official train/test into a single pool.
+- Partition samples across federated clients (IID / Non-IID variants).
+- Persist per-client train/test splits and a per-client distribution figure.
+
+CLI (consistent with other generators)
+--------------------------------------
+python generate_fashionmnist.py <iid|noniid> <balance|-> <pat|dir|->
+
+Examples:
+  # IID & balanced across 20 clients
+  python generate_fashionmnist.py iid balance -
+
+  # Non-IID pathological across 20 clients
+  python generate_fashionmnist.py noniid - pat
+
+  # Non-IID Dirichlet
+  python generate_fashionmnist.py noniid - dir
+
+Outputs (side effects)
+----------------------
+FashionMNIST/
+  ├── config.json
+  ├── train/                 # per-client train tensors/labels
+  ├── test/                  # per-client test tensors/labels
+  └── figures/client_data_distribution.png
+
+Notes
+-----
+- FashionMNIST is grayscale (1x28x28). We normalize to [-1, 1] using mean/std=(0.5,).
+- We load the entire dataset with a single DataLoader batch for simplicity.
+  If you hit OOM, refactor to iterative loading and concatenate.
+- Design choice: class_per_client=2 to create label-skew; record it in config.json.
+"""
+
 import numpy as np
 import os
 import sys
@@ -61,7 +101,6 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
     save_file(config_path, train_path, test_path, train_data, test_data, num_clients, num_classes, 
         statistic, niid, balance, partition)
 
-    # Visualize the train & test data distribution of each client and save the figure
     rows = (num_clients + 3) // 4
     fig, axes = plt.subplots(rows, 4, figsize=(4 * 4, 3 * rows))
     axes = axes.flatten()

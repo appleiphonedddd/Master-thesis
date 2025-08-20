@@ -1,3 +1,50 @@
+"""
+Tiny-ImageNet federated split generator.
+
+Purpose
+-------
+- Download/prepare Tiny-ImageNet (if absent).
+- Load all images via an ImageFolder-compatible wrapper.
+- Partition samples across federated clients (IID / Non-IID variants).
+- Persist per-client train/test splits and a per-client distribution figure.
+
+CLI (consistent with other generators)
+--------------------------------------
+python generate_tinyimagenet.py <iid|noniid> <balance|-> <pat|dir|->
+
+Examples:
+  # IID & balanced across 20 clients
+  python generate_tinyimagenet.py iid balance -
+
+  # Non-IID pathological across 20 clients
+  python generate_tinyimagenet.py noniid - pat
+
+  # Non-IID Dirichlet
+  python generate_tinyimagenet.py noniid - dir
+
+Outputs (side effects)
+----------------------
+TinyImagenet/
+  ├── config.json
+  ├── train/                        # per-client train tensors/labels
+  ├── test/                         # per-client test tensors/labels
+  └── figures/client_data_distribution.png
+
+Notes
+-----
+- Tiny-ImageNet images are 64×64 RGB already; we normalize to [-1, 1] via
+  mean/std=(0.5, 0.5, 0.5) for parity with other generators.
+- We load the entire dataset in a single DataLoader batch (simple, fast).
+  If you hit OOM, switch to chunked loading and concatenate.
+- Design choice: class_per_client=20 to create moderate label-skew.
+  Record this in config.json for reproducibility.
+
+Security/Compliance
+-------------------
+- Uses shell `wget`/`unzip` for brevity. Prefer Python stdlib (`urllib.request`,
+  `zipfile`) with checksum verification (e.g., SHA256) in production.
+"""
+
 import numpy as np
 import os
 import sys

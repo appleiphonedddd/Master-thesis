@@ -1,3 +1,45 @@
+"""
+CIFAR-100 federated split generator.
+
+Purpose
+-------
+- Download/prepare CIFAR-100.
+- Merge official train/test into a single pool.
+- Partition samples across federated clients (IID / Non-IID).
+- Persist per-client train/test splits and a distribution figure.
+
+CLI (current)
+-------------
+python generate_cifar100.py <iid|noniid> <balance|-> <pat|dir|->
+
+Examples:
+  # IID & balanced across 20 clients
+  python generate_cifar100.py iid balance -
+
+  # Non-IID pathological across 20 clients
+  python generate_cifar100.py noniid - pat
+
+  # Non-IID Dirichlet
+  python generate_cifar100.py noniid - dir
+
+Outputs (side effects)
+----------------------
+Cifar100/
+  ├── config.json
+  ├── train/            # per-client train data
+  ├── test/             # per-client test data
+  └── figures/client_data_distribution.png
+
+Notes
+-----
+- Images are normalized to [-1, 1] via mean/std = 0.5 per channel.
+- We load each split in one batch into RAM for simplicity; on low-memory
+  machines, switch to iterative loading and concatenate.
+- Design choice: class_per_client=10 to induce label-skew on CIFAR-100.
+  Tune it per experiment and record in config.json.
+
+"""
+
 import numpy as np
 import os
 import sys
@@ -62,7 +104,6 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
     save_file(config_path, train_path, test_path, train_data, test_data, num_clients, num_classes, 
         statistic, niid, balance, partition)
 
-    # Visualize the train & test data distribution of each client and save the figure
     rows = (num_clients + 3) // 4
     fig, axes = plt.subplots(rows, 4, figsize=(4 * 4, 3 * rows))
     axes = axes.flatten()

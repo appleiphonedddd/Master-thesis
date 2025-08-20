@@ -1,3 +1,51 @@
+"""
+Stanford Dogs federated split generator.
+
+Purpose
+-------
+- Download/prepare the Stanford Dogs dataset (Images/ only).
+- Load all images via an ImageFolder-compatible wrapper.
+- Partition samples across federated clients (IID / Non-IID variants).
+- Persist per-client train/test splits and a per-client distribution figure.
+
+CLI (consistent with other generators)
+--------------------------------------
+python generate_stanford_dogs.py <iid|noniid> <balance|-> <pat|dir|->
+
+Examples:
+  # IID & balanced across 20 clients
+  python generate_stanford_dogs.py iid balance -
+
+  # Non-IID pathological across 20 clients
+  python generate_stanford_dogs.py noniid - pat
+
+  # Non-IID Dirichlet
+  python generate_stanford_dogs.py noniid - dir
+
+Outputs (side effects)
+----------------------
+StanfordDogs/
+  ├── config.json
+  ├── train/                      # per-client train tensors/labels
+  ├── test/                       # per-client test tensors/labels
+  └── figures/client_data_distribution.png
+
+Notes
+-----
+- Images are resized to 64×64 and normalized to [-1, 1] using mean/std=(0.5, 0.5, 0.5),
+  matching TinyImageNet memory footprint for fair comparison across generators.
+- We load the entire dataset in a single DataLoader batch for simplicity;
+  if OOM occurs, refactor to chunked loading and concatenate.
+- Design choice: class_per_client=20 to create moderate label-skew (parity with TinyImageNet).
+  Record this in config.json for reproducibility.
+
+Security/Compliance
+-------------------
+- Uses shell `wget`/`tar` for brevity. Prefer Python stdlib (`urllib.request`, `tarfile`)
+  and checksum verification (e.g., SHA256) in production environments.
+"""
+
+
 import numpy as np
 import os
 import sys
@@ -47,7 +95,7 @@ class ImageFolder_custom(DatasetFolder):
         else:
             return len(self.dataidxs)
 
-def _ensure_rawdata(dir_path: str):
+def ensure_rawdata(dir_path: str):
     """Download and extract Stanford Dogs (images.tar) into rawdata/ if missing.
     We only need images for classification; lists/annotations are optional.
     """
@@ -90,7 +138,7 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
         return
 
     # Download / prepare raw data if needed
-    _ensure_rawdata(dir_path)
+    ensure_rawdata(dir_path)
 
     # Transform: resize to 64x64 to make a full-tensor load feasible, then normalize like TinyImagenet
     transform = transforms.Compose([
