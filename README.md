@@ -11,7 +11,6 @@ We propose
           - [Installation](#installation)
     - [Deployment](#deployment)
     - [Extend new algorithms and datasets](#extend-new-algorithms-and-datasets)
-    - [Frameworks Used](#frameworks-used)
     - [Author](#author)
 
 ### Getting Started
@@ -161,10 +160,6 @@ python plot_loss.py practical/Cifar10/Loss/FedAS.csv practical/Cifar10/Loss/FedA
 - **New Model**: To add a new model, simply include it in `./system/flcore/trainmodel/models.py`.
   
 - **New Optimizer**: If you need a new optimizer for training, add it to `./system/flcore/optimizers/fedoptimizer.py`.
-
-### Frameworks Used
-
-- [PyTorch](https://pytorch.org/)
 
 ### Author
 
