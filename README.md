@@ -1,4 +1,4 @@
-# <img src="docs/imgs/logo-green.png" alt="icon" height="24" style="vertical-align:sub;"/> Personalized Federated Learning on Non-IID Data via Global-Local Optimization
+# Personalized Federated Learning on Non-IID Data via Global-Local Optimization
 
 We propose
 
