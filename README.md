@@ -17,7 +17,9 @@ We propose
 
 ###### Requirements
 
-Ubuntu 24.04.02 LTS
+- **Operating System**: Ubuntu 24.04.02 LTS (Linux-based)
+- **GPU**: NVIDIA GeForce RTX 4060 (or higher, CUDA-enabled)
+- **CUDA Toolkit**: 12.x (compatible with your GPU driver)
 
 ###### Installation
 
