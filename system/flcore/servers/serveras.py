@@ -68,7 +68,8 @@ class FedAS(Server):
             # evaluate personalized models, ie FedAvg-C
             if i%self.eval_gap == 0:
                 print(f"\n-------------Round number: {i}-------------")
-                print("\nEvaluate global model")
+                #print("\nEvaluate global model")
+                
                 self.evaluate()
 
             # self.send_models()

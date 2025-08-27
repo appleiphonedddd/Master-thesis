@@ -235,6 +235,10 @@ class Server(object):
         accs = [a / n for a, n in zip(stats[2], stats[1])]
         aucs = [a / n for a, n in zip(stats[3], stats[1])]
         
+        print("\nEvaluate Personalized model")
+        for cid, n, acc_i, auc_i in zip(stats[0], stats[1], accs, aucs):
+            print(f"[Client {cid:02d}] Personalized Acc = {acc_i:.4f}")
+        
         if acc == None:
             self.rs_test_acc.append(test_acc)
         else:
@@ -244,7 +248,8 @@ class Server(object):
             self.rs_train_loss.append(train_loss)
         else:
             loss.append(train_loss)
-
+        print("\nEvaluate global model")
+        
         print("Averaged Train Loss: {:.4f}".format(train_loss))
         print("Averaged Test Accuracy: {:.4f}".format(test_acc))
         print("Averaged Test AUC: {:.4f}".format(test_auc))
