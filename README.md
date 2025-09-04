@@ -4,7 +4,7 @@ We propose
 
 ## Contents
 
-- [ Personalized Federated Learning on Non-IID Data via Global-Local Optimization](#-personalized-federated-learning-on-non-iid-data-via-global-local-optimization)
+- [Personalized Federated Learning on Non-IID Data via Global-Local Optimization](#personalized-federated-learning-on-non-iid-data-via-global-local-optimization)
   - [Contents](#contents)
     - [Getting Started](#getting-started)
           - [Requirements](#requirements)
@@ -67,29 +67,29 @@ python generate_FashionMNIST.py noniid - dir # for practical noniid and unbalanc
 ```sh
 cd system/
 
-python main.py -data FashionMNIST -m CNN -algo FedAvg -gr 100 -did 0 # using the FashionMNIST dataset, the FedAvg algorithm, and the 4-layer CNN model, communication round 100 and single GPU
+python main.py -data FashionMNIST -m CNN -algo FedAvg -gr 300 -did 0 # using the FashionMNIST dataset, the FedAvg algorithm, and the 4-layer CNN model, communication round 300 and single GPU
 
-python main.py -data MNIST -m CNN -algo FedAvg -gr 100 -did 0
+python main.py -data MNIST -m CNN -algo FedAvg -gr 300 -did 0
 
-python main.py -data KMNIST -m CNN -algo FedAvg -gr 100 -did 0
+python main.py -data KMNIST -m CNN -algo FedAvg -gr 300 -did 0
 
-python main.py -data Cifar10 -m CNN -algo FedAvg -gr 100 -did 0
+python main.py -data Cifar10 -m CNN -algo FedAvg -gr 300 -did 0
 
-python main.py -data MiniImagenet -ncl 64 -m CNN -algo FedAvg -gr 100 -did 0
+python main.py -data MiniImagenet -ncl 64 -m CNN -algo FedAvg -gr 300 -did 0
 
-python main.py -data Cifar100 -ncl 100 -m CNN -algo FedAvg -gr 100 -did 0
+python main.py -data Cifar100 -ncl 100 -m CNN -algo FedAvg -gr 600 -did 0
 
-python main.py -data FGVC_Aircraft -ncl 100 -m CNN -algo FedAvg -gr 300 -did 0
+python main.py -data FGVC_Aircraft -ncl 100 -m CNN -algo FedAvg -gr 600 -did 0
 
-python main.py -data Flowers102 -ncl 102 -m CNN -algo FedAvg -gr 100 -did 0
+python main.py -data Flowers102 -ncl 102 -m CNN -algo FedAvg -gr 600 -did 0
 
-python main.py -data StanfordDogs -ncl 120 -m CNN -algo FedAvg -gr 100 -did 0
+python main.py -data StanfordDogs -ncl 120 -m CNN -algo FedAvg -gr 600 -did 0
 
-python main.py -data TinyImagenet -ncl 200 -m CNN -algo FedAvg -gr 100 -did 0
+python main.py -data TinyImagenet -ncl 200 -m CNN -algo FedAvg -gr 1000 -did 0
 
-python main.py -data CUB_200_2011 -ncl 200 -m CNN -algo FedAvg -gr 100 -did 0
+python main.py -data CUB_200_2011 -ncl 200 -m CNN -algo FedAvg -gr 1000 -did 0
 
-python main.py -data FashionMNIST -m CNN -algo FedAvg -gr 100 -did 0,1,2,3 # running on multiple GPUs
+python main.py -data FashionMNIST -m CNN -algo FedAvg -gr 300 -did 0,1,2,3 # running on multiple GPUs
 ```
 
 4. Accuracy and Loss visualization
