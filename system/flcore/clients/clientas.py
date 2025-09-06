@@ -6,10 +6,13 @@ import time
 import copy
 from flcore.clients.clientbase import Client
 from torch.autograd import grad
-import math
-from torch.nn.utils import clip_grad_norm_
+
+
+
 
 class clientAS(Client):
+
+
     def __init__(self, args, id, train_samples, test_samples, **kwargs):
         super().__init__(args, id, train_samples, test_samples, **kwargs)
         self.fim_trace_history = []
@@ -20,6 +23,7 @@ class clientAS(Client):
             # self.model.to(self.device)
             self.model.train()
 
+        
             start_time = time.time()
 
             max_local_epochs = self.local_epochs
@@ -39,7 +43,6 @@ class clientAS(Client):
                     loss = self.loss(output, y)
                     self.optimizer.zero_grad()
                     loss.backward()
-                    clip_grad_norm_(self.model.parameters(), max_norm=5.0)
                     self.optimizer.step()
 
             # self.model.cpu()
@@ -53,33 +56,27 @@ class clientAS(Client):
 
             # set model to eval mode
             self.model.eval()
-            fim_trace_sum = torch.zeros((), dtype=torch.float64, device=self.device)
-            num_batches = 0
-
+            # print(f'client{self.id}, start cal fim.')
+            # Compute FIM and its trace after training
+            fim_trace_sum = 0
             for i, (x, y) in enumerate(self.load_train_data()):
+                # Forward pass
                 x = x.to(self.device)
                 y = y.to(self.device)
-                
-                # forward
                 outputs = self.model(x)
-                nll = -F.log_softmax(outputs, dim=1)[torch.arange(len(y), device=self.device), y].mean()
+                # Negative log likelihood as our loss
+                nll = -torch.nn.functional.log_softmax(outputs, dim=1)[range(len(y)), y].mean()
 
-                grads = grad(nll, self.model.parameters(), retain_graph=False, allow_unused=True)
+                # Compute gradient of the negative log likelihood w.r.t. model parameters
+                grads = grad(nll, self.model.parameters())
 
-
+                # Compute and accumulate the trace of the Fisher Information Matrix
                 for g in grads:
-                    if g is None:
-                        continue
-                    g = torch.nan_to_num(g, nan=0.0, posinf=0.0, neginf=0.0)
-                    fim_trace_sum += g.to(torch.float64).pow(2).sum()
+                    fim_trace_sum += torch.sum(g ** 2).detach()
 
-                num_batches += 1
-            fim_val = (fim_trace_sum / num_batches).item() if num_batches > 0 else 0.0
+            # add the fisher log
+            self.fim_trace_history.append(fim_trace_sum.item())
 
-            if (not math.isfinite(fim_val)) or fim_val < 0:
-                fim_val = 0.0
-
-            self.fim_trace_history.append(float(fim_val))
             # Evaluate on the client's test dataset
             # test_acc = self.evaluate()
             # print(f"Client {self.id}, Test Accuracy: {test_acc:.1f}, FIM-T value: {fim_trace_sum.item():.1f}")
@@ -193,4 +190,3 @@ class clientAS(Client):
 
 
         # end
-

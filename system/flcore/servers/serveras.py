@@ -1,7 +1,6 @@
 import time
 import copy
 import numpy as np
-import math
 # from flcore.clients.clientavg import clientAVG
 from flcore.clients.clientas import clientAS
 from flcore.servers.serverbase import Server
@@ -33,7 +32,7 @@ class FedAS(Server):
 
             progress = epoch / self.global_rounds
             
-            client.set_parameters(copy.deepcopy(self.global_model), progress=progress)
+            client.set_parameters(copy.deepcopy(self.global_model), progress)
 
             client.send_time_cost['num_rounds'] += 1
             client.send_time_cost['total_cost'] += 2 * (time.time() - start_time)    
@@ -45,24 +44,14 @@ class FedAS(Server):
         for param in self.global_model.parameters():
             param.data.zero_()
 
-    
-        traces = []
-        for cid in self.uploaded_ids:
-            v = self.clients[cid].fim_trace_history[-1]
-            
-            if not np.isfinite(v) or v < 0:
-                v = 0.0
-            traces.append(float(v))
+        # calculate the aggregrate weight with respect to the FIM value of model
+        FIM_weight_list = []
+        for id in self.uploaded_ids:
+            FIM_weight_list.append(self.clients[id].fim_trace_history[-1])
+        # normalization to obtain weight
+        FIM_weight_list = [FIM_value/sum(FIM_weight_list) for FIM_value in FIM_weight_list]
 
-
-        total = float(np.sum(traces))
-        if not np.isfinite(total) or total <= 0.0:
-            weights = [1.0 / len(self.uploaded_models)] * len(self.uploaded_models)
-            print("[FedAS] FIM weights invalid -> fallback to uniform averaging")
-        else:
-            weights = [t / total for t in traces]
-
-        for w, client_model in zip(weights, self.uploaded_models):
+        for w, client_model in zip(FIM_weight_list, self.uploaded_models):
             self.add_parameters(w, client_model)
 
     def train(self):
@@ -80,7 +69,6 @@ class FedAS(Server):
             if i%self.eval_gap == 0:
                 print(f"\n-------------Round number: {i}-------------")
                 #print("\nEvaluate global model")
-                
                 self.evaluate()
 
             # self.send_models()
@@ -148,4 +136,3 @@ class FedAS(Server):
         avg_fim_histories = np.mean(avg_fim_histories, axis=0)
         formatted_avg = [f"{value:.1f}" for value in avg_fim_histories]
         print(f"Avg Sum_T_FIM : {formatted_avg}")
-
