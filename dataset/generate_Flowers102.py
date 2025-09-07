@@ -48,129 +48,70 @@ np.random.seed(1)
 num_clients = 20
 dir_path = "Flowers102/"
 
-IMG_SIZE = 64
 
-def load_split(split_name, transform, root_dir):
-    """
-    Load a Flowers102 split and return images/labels as NumPy arrays.
-
-    Args:
-        split_name: One of {"train", "val", "test"} as defined by torchvision.
-        transform: Transform applied by the dataset when fetching samples.
-        root_dir: Root directory for raw cached data.
-
-    Returns:
-        images_np: float32 array of shape (N, 3, IMG_SIZE, IMG_SIZE), range [-1, 1].
-        labels_np: int64 array of shape (N,), class ids in [0, num_classes-1].
-
-    Notes:
-        - We request a DataLoader with batch_size=len(dataset) to pull the
-          entire split in one shot for simplicity. This assumes RAM is sufficient.
-        - If you see memory pressure, refactor to iterate mini-batches and
-          concatenate.
-    """
-
-    ds = torchvision.datasets.Flowers102(
-        root=root_dir, split=split_name, download=True, transform=transform
-    )
-    loader = torch.utils.data.DataLoader(ds, batch_size=len(ds), shuffle=False, num_workers=0)
-    for imgs, targets in loader:
-        images_np = imgs.cpu().detach().numpy()
-        labels_np = targets.cpu().detach().numpy()
-        return images_np, labels_np
-    return np.empty((0, 3, IMG_SIZE, IMG_SIZE), dtype=np.float32), np.empty((0,), dtype=np.int64)
-
+# Allocate data to users
 def generate_dataset(dir_path, num_clients, niid, balance, partition):
-    """
-    Generate federated splits from Flowers102 and persist artifacts.
-
-    Args:
-        dir_path: Output directory (project root for generated artifacts).
-        num_clients: Number of federated clients to partition into (>=1).
-        niid: If True, produce a Non-IID partitioning; otherwise IID.
-        balance: If True, balanced sample counts across clients (where applicable).
-        partition: Non-IID strategy hint, e.g., "pat" (pathological) or "dir"
-                   (Dirichlet). Use None or "-" to disable.
-
-    Side Effects:
-        - Creates folders/files under `dir_path` (see module docstring).
-        - Saves a distribution bar plot per client.
-
-    Raises:
-        ValueError: If arguments are inconsistent (e.g., negative clients).
-        RuntimeError: If persistence fails (I/O errors) or utils behave unexpectedly.
-
-    Design Notes:
-        - We merge train/val/test to simulate a single unlabeled pool before
-          federated splitting. This is a choice to maximize sample variety per
-          client; if you want to keep official test untouched, split before merge.
-        - Images are normalized to mean=std=0.5 per channel => [-1, 1] range.
-        - `class_per_client=2` is a strong inductive bias for label-skew; tune it
-          per experiment design and record in config.json for traceability.
-    """
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
+        
+    # Setup directory for train/test data
+    config_path = dir_path + "config.json"
+    train_path = dir_path + "train/"
+    test_path = dir_path + "test/"
 
-    config_path = os.path.join(dir_path, "config.json")
-    train_path  = os.path.join(dir_path, "train/")
-    test_path   = os.path.join(dir_path, "test/")
-
-    # Fast-path: skip recomputation if config + outputs already match params
     if check(config_path, train_path, test_path, num_clients, niid, balance, partition):
         return
 
-    transform = transforms.Compose([
-        transforms.Resize(IMG_SIZE),
-        transforms.CenterCrop(IMG_SIZE),
-        transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-    ])
+    dataset_image = []
+    dataset_label = []
+        
+    # Get Flowers102 data
+    transform = transforms.Compose(
+        [transforms.Resize((64, 64)), 
+        transforms.ToTensor(), 
+        transforms.Normalize((0.5), (0.5))]
+    )
 
-    root_raw = os.path.join(dir_path, "rawdata")
-    
-    # Load all official splits, then concatenate
-    tr_imgs, tr_lbls = load_split("train", transform, root_raw)
-    va_imgs, va_lbls = load_split("val",   transform, root_raw)
-    te_imgs, te_lbls = load_split("test",  transform, root_raw)
+    def load_data(split="train"):
+        trainset = torchvision.datasets.Flowers102(
+            root=dir_path+"rawdata", split=split, download=True, transform=transform)
+        trainloader = torch.utils.data.DataLoader(
+            trainset, batch_size=len(trainset), shuffle=False)
+        for _, train_data in enumerate(trainloader, 0):
+            trainset.data, trainset.targets = train_data
+        dataset_image.extend(trainset.data.cpu().detach().numpy())
+        dataset_label.extend(trainset.targets.cpu().detach().numpy())
 
-    dataset_image = np.concatenate([tr_imgs, va_imgs, te_imgs], axis=0)
-    dataset_label = np.concatenate([tr_lbls, va_lbls, te_lbls], axis=0)
+    load_data("train")
+    load_data("val")
+    load_data("test")
 
-    num_classes = len(set(dataset_label.tolist()))
+    dataset_image = np.array(dataset_image)
+    dataset_label = np.array(dataset_label)
+
+    num_classes = len(set(dataset_label))
     print(f'Number of classes: {num_classes}')
 
-    # Partition across clients (utils encapsulates different schemes).
-    X, y, statistic = separate_data(
-        (dataset_image, dataset_label),
-        num_clients, num_classes,
-        niid, balance, partition,
-        class_per_client=2
-    )
-
+    X, y, statistic = separate_data((dataset_image, dataset_label), num_clients, num_classes, 
+                                    niid, balance, partition, class_per_client=10)
     train_data, test_data = split_data(X, y)
-
-    save_file(
-        config_path, train_path, test_path,
-        train_data, test_data,
-        num_clients, num_classes, statistic,
-        niid, balance, partition
-    )
-
-    # --- Visualization: per-client label histograms -------------------------
+    save_file(config_path, train_path, test_path, train_data, test_data, num_clients, num_classes, 
+        statistic, niid, balance, partition)
+    
     rows = (num_clients + 3) // 4
     fig, axes = plt.subplots(rows, 4, figsize=(4 * 4, 3 * rows))
     axes = axes.flatten()
     width = 0.4
 
     for i in range(num_clients):
+        
         y_train = train_data[i]['y']
         y_test  = test_data[i]['y']
 
         train_counts = [np.sum(y_train == c) for c in range(num_classes)]
         test_counts  = [np.sum(y_test  == c) for c in range(num_classes)]
         x = np.arange(num_classes)
-        
-        # Two bars per class: train vs test
+
         axes[i].bar(x - width/2, train_counts, width=width, label='Train', color='C0')
         axes[i].bar(x + width/2, test_counts,  width=width, label='Test',  color='C1')
 
@@ -178,8 +119,7 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition):
         axes[i].set_xlabel('Class')
         axes[i].set_ylabel('Samples')
         axes[i].legend(fontsize='small')
-    
-    # Delete empty subplots if num_clients is not multiple of 4.
+
     for j in range(num_clients, len(axes)):
         fig.delaxes(axes[j])
 
