@@ -1,10 +1,11 @@
-# Personalized Federated Learning on Non-IID Data via Global-Local Optimization
+# Beyond t-FIM: Coverage- and Consistency-Aware Aggregation for High-Accuracy Personalized FL
 
-We propose
+We propose PAPA (Prototype-Aligned Personalization for Accuracy), a lightweight personalization framework built on FedAS that improves final test accuracy under extreme non-IID data.
+PAPA aggregates privacy-preserving class prototypes (mean feature and count per class) on the server and broadcasts global prototypes back to clients. During Align-Then-Train we introduce a prototype-contrastive objective that pulls local features toward the corresponding global prototype while repelling other classes, only aligning the backbone and leaving the classifier head to specialize locally. Combined with an adaptive alignment scheduler (ATT++), PAPA stabilizes late-round drift and sharpens decision boundaries without sharing raw data or gradients. On Tiny-ImageNet with Dirichlet α=0.1 and 20 clients, PAPA consistently improves the final accuracy over FedAS by [+X.X pp] on average and [+Y.Y pp] for the worst-case client, while reducing late-round degradation and cross-round variance
 
 ## Contents
 
-- [Personalized Federated Learning on Non-IID Data via Global-Local Optimization](#personalized-federated-learning-on-non-iid-data-via-global-local-optimization)
+- [Beyond t-FIM: Coverage- and Consistency-Aware Aggregation for High-Accuracy Personalized FL](#beyond-t-fim-coverage--and-consistency-aware-aggregation-for-high-accuracy-personalized-fl)
   - [Contents](#contents)
     - [Getting Started](#getting-started)
           - [Requirements](#requirements)
