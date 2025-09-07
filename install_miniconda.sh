@@ -175,7 +175,6 @@ create_or_update_env() {
   fi
 }
 
-# --- 這段是為了「不用你手動 source」 ---
 is_sourced() {
   # bash
   if [[ -n "${BASH_VERSION:-}" ]]; then
@@ -197,7 +196,6 @@ activate_in_current_shell() {
     eval "$("$PREFIX/bin/conda" shell.zsh hook)"
     return
   fi
-  # 其他殼暫不支援原地啟用
   return 1
 }
 
@@ -211,7 +209,6 @@ refresh_shell() {
     return 0
   fi
 
-  # 不是以 source 執行：自動開一個新的 login shell，rc 已含 conda 初始化
   local target="${SHELL:-}"
   if [[ -z "$target" ]]; then
     if have zsh; then target="$(command -v zsh)"
@@ -229,10 +226,8 @@ cleanup() {
 trap 'echo "Error occurred. See log: $LOG_FILE"' ERR
 trap cleanup EXIT
 
-# -------- Main --------
 echo "== Miniconda Bootstrap =="
 
-# Warn if another conda already on PATH with different prefix
 if have conda; then
   EXISTING_PREFIX="$(conda info --base 2>/dev/null || true)"
   if [[ -n "$EXISTING_PREFIX" && "$EXISTING_PREFIX" != "$PREFIX" ]]; then
@@ -256,7 +251,6 @@ echo "Installing to: $PREFIX (batch mode)"
 bash "$INST" -b -p "$PREFIX"
 rm -f "$INST"
 
-# make conda usable in this process (for following steps)
 export PATH="$PREFIX/bin:$PATH"
 
 echo "Conda version:"
@@ -275,7 +269,6 @@ create_or_update_env "$ENV_FILE"
 echo "Verifying conda info..."
 conda info || true
 
-# <<< 關鍵：自動讓你不用手動 source >>>
 refresh_shell
 
 echo "Done."
