@@ -76,19 +76,19 @@ python main.py -data KMNIST -m CNN -algo FedAvg -gr 300 -did 0
 
 python main.py -data Cifar10 -m CNN -algo FedAvg -gr 300 -did 0
 
-python main.py -data MiniImagenet -ncl 64 -m ResNet18 -algo FedAvg -gr 300 -did 0
+python main.py -data MiniImagenet -ncl 64 -m CNN -algo FedAvg -gr 500 -did 0
 
-python main.py -data Cifar100 -ncl 100 -m CNN -algo FedAvg -gr 600 -did 0
+python main.py -data Cifar100 -ncl 100 -m CNN -algo FedAvg -gr 700 -did 0
 
-python main.py -data FGVC_Aircraft -ncl 100 -m CNN -algo FedAvg -gr 600 -did 0
+python main.py -data FGVC_Aircraft -ncl 100 -m CNN -algo FedAvg -gr 700 -did 0
 
-python main.py -data Flowers102 -ncl 102 -m CNN -algo FedAvg -gr 600 -did 0
+python main.py -data Flowers102 -ncl 102 -m CNN -algo FedAvg -gr 700 -did 0
 
-python main.py -data StanfordDogs -ncl 120 -m ResNet18 -algo FedAvg -gr 600 -did 0
+python main.py -data StanfordDogs -ncl 120 -m CNN -algo FedAvg -gr 700 -did 0
 
-python main.py -data TinyImagenet -ncl 200 -m ResNet18 -algo FedAvg -gr 160 -did 0
+python main.py -data TinyImagenet -ncl 200 -m CNN -algo FedAvg -gr 160 -did 0
 
-python main.py -data CUB_200_2011 -ncl 200 -m ResNet18 -algo FedAvg -gr 1000 -did 0
+python main.py -data CUB_200_2011 -ncl 200 -m CNN -algo FedAvg -gr 160 -did 0
 
 python main.py -data FashionMNIST -m CNN -algo FedAvg -gr 300 -did 0,1,2,3 # running on multiple GPUs
 ```
