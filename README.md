@@ -1,11 +1,10 @@
-# Beyond t-FIM: Coverage- and Consistency-Aware Aggregation for High-Accuracy Personalized FL
+# Drift-Aware Alignment and Fisher-Weighted Aggregation for Robust Personalized FL
 
-We propose PAPA (Prototype-Aligned Personalization for Accuracy), a lightweight personalization framework built on FedAS that improves final test accuracy under extreme non-IID data.
-PAPA aggregates privacy-preserving class prototypes (mean feature and count per class) on the server and broadcasts global prototypes back to clients. During Align-Then-Train we introduce a prototype-contrastive objective that pulls local features toward the corresponding global prototype while repelling other classes, only aligning the backbone and leaving the classifier head to specialize locally. Combined with an adaptive alignment scheduler (ATT++), PAPA stabilizes late-round drift and sharpens decision boundaries without sharing raw data or gradients. On Tiny-ImageNet with Dirichlet α=0.1 and 20 clients, PAPA consistently improves the final accuracy over FedAS by [+X.X pp] on average and [+Y.Y pp] for the worst-case client, while reducing late-round degradation and cross-round variance
+We propose a PFL, a plug-and-play extension of FedAS that targets the late-round accuracy drop and instability observed on high-class, highly non-IID federated workloads. FedAS-Stable introduces (i) adaptive alignment that modulates the per-client alignment strength each round using a lightweight drift signal computed from representation cosine/KL on a small anchor set; (ii) robust FIM weighting, which stabilizes t-FIM–based aggregation via EMA smoothing and percentile clipping; and (iii) a two-phase schedule that freezes shallow layers and decays learning rate around the onset of instability to prevent over-alignment. Across MNIST, FashionMNIST, CIFAR-10/100, and Tiny-ImageNet under Dirichlet α=0.1 with small CNNs and standard participation regimes, FedAS-Stable consistently improves personalized and global accuracy, increases the accuracy–round AUC, reduces rounds to 95% of final accuracy, and lowers tail variance versus FedAS and strong personalized baselines. The method adds minimal overhead, requires no extra communication, and is orthogonal to other personalization techniques.
 
 ## Contents
 
-- [Beyond t-FIM: Coverage- and Consistency-Aware Aggregation for High-Accuracy Personalized FL](#beyond-t-fim-coverage--and-consistency-aware-aggregation-for-high-accuracy-personalized-fl)
+- [Drift-Aware Alignment and Fisher-Weighted Aggregation for Robust Personalized FL](#drift-aware-alignment-and-fisher-weighted-aggregation-for-robust-personalized-fl)
   - [Contents](#contents)
     - [Getting Started](#getting-started)
           - [Requirements](#requirements)
