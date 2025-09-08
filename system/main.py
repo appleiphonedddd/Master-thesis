@@ -53,6 +53,7 @@ from flcore.servers.serveras import FedAS
 from flcore.servers.serverDodm import FedDodm
 from flcore.servers.servercross import FedCross
 from flcore.servers.serverDCPFL import DCPFL
+from flcore.servers.serverCalm import FedCALM
 
 from flcore.trainmodel.models import *
 
@@ -362,6 +363,12 @@ def run(args):
             args.model.fc = nn.Identity()
             args.model = BaseHeadSplit(args.model, args.head)
             server = DCPFL(args, i)
+        
+        elif args.algorithm == "FedCALM":
+            args.head = copy.deepcopy(args.model.fc)
+            args.model.fc = nn.Identity()
+            args.model = BaseHeadSplit(args.model, args.head)
+            server = FedCALM(args, i)
 
         else:
             raise NotImplementedError
@@ -539,6 +546,12 @@ if __name__ == "__main__":
                         help="Window size for WMA-based stability check")
     parser.add_argument('-weps', "--wma_eps", type=float, default=0.01,
                         help="Mean relative |Δloss| threshold to deem 'stable' (e.g., 0.01 = 1%)")
+
+    # FedCALM
+
+    parser.add_argument('--calm_eps', type=float, default=0.01, help='epsilon in CALM b_i term')
+    parser.add_argument('--calm_C', type=float, default=1.0, help='box constraint for lambda')
+    parser.add_argument('--calm_ridge', type=float, default=1e-8, help='ridge for G stabilization')
 
     args = parser.parse_args()
 
