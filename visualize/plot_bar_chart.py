@@ -7,35 +7,47 @@ def plot_accuracy(methods, datasets, accuracy):
     width = 0.2
     fig, ax = plt.subplots(figsize=(12, 6))
 
+    # 自訂配色
+    colors = ['#FF7F0E', '#2CA02C', '#1F77B4', '#D62728']
+
     for i, method in enumerate(methods):
-        bars = ax.bar(x + i*width, accuracy[i], width, label=method)
+        if method == "FedAS":
+            bars = ax.bar(x + i*width, accuracy[i], width,
+                          label=method, color=colors[i],
+                          edgecolor='black', linewidth=1.5, alpha=1.0)
+        else:
+            bars = ax.bar(x + i*width, accuracy[i], width,
+                          label=method, color=colors[i],
+                          alpha=0.6)
+
         for bar in bars:
             height = bar.get_height()
             ax.annotate(f'{height:.2f}',
                         xy=(bar.get_x() + bar.get_width() / 2, height),
                         xytext=(0, 3),
                         textcoords="offset points",
-                        ha='center', va='bottom', fontsize=8)
+                        ha='center', va='bottom', fontsize=9, fontweight='bold')
 
-    ax.set_ylabel('Accuracy')
-    ax.set_title('Accuracy Comparison Across Methods and Datasets')
+    ax.set_ylabel('Accuracy', fontsize=12, fontweight='bold')
+    ax.set_title('Accuracy Comparison Across Methods and Datasets', fontsize=14, fontweight='bold')
     ax.set_xticks(x + width * (len(methods)-1) / 2)
-    ax.set_xticklabels(datasets, rotation=15, ha='right')
-    ax.legend()
+    ax.set_xticklabels(datasets, rotation=15, ha='right', fontsize=11, fontweight='bold')
+    ax.tick_params(axis='y', labelsize=11)
+    ax.legend(fontsize=11)
 
     ax.grid(False)
 
     plt.tight_layout()
-    plt.savefig('Bar_chart.png')
-    print("[Info] Saved accuracy comparison plot without grid to Bar_chart.png")
+    plt.savefig('Bar_chart.png', dpi=300)
+    print("[Info] Saved accuracy comparison plot to Bar_chart.png")
 
 methods = ['FedAvg', 'FedDodm', 'FedAS', 'DCPFL']
-datasets = ['MNIST','FMNIST', 'CIFAR10', 'CIFAR100', 'Tiny-ImageNet', 'Stanford Dogs','Cub200','FGVC-Aircraft']
+datasets = ['MNIST','FMNIST', 'CIFAR10', 'CIFAR100', 'Tiny-ImageNet']
 accuracy = [
-    [98.18, 85.80, 56.68, 32.69,19.50,7.66,6.29,24.98],  # FedAvg
-    [99.65, 97.57, 89.90, 49.97,35.50,25.44,13.27,46.48],  # FedDodm
-    [99.68, 97.74, 91.55, 59.62,40.06,28.92,19.22,49.08],  # FedAS
-    [99.25, 97.36, 89.55, 46.82,26.92,np.nan,np.nan,np.nan]   # DCPFL
+    [98.18, 85.80, 56.68, 32.48, 19.66],  # FedAvg
+    [99.65, 97.57, 89.90, 56.52, 37.66],  # FedDodm
+    [99.68, 97.74, 91.55, 59.78, 40.09],  # FedAS
+    [99.25, 97.36, 89.55, 46.88, 27.00]   # DCPFL
 ]
 
 plot_accuracy(methods, datasets, accuracy)
