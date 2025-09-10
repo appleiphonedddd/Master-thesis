@@ -548,7 +548,6 @@ if __name__ == "__main__":
                         help="Mean relative |Δloss| threshold to deem 'stable' (e.g., 0.01 = 1%)")
 
     # FedCALM
-
     parser.add_argument('--calm_eps', type=float, default=0.01, help='epsilon in CALM b_i term')
     parser.add_argument('--calm_C', type=float, default=1.0, help='box constraint for lambda')
     parser.add_argument('--calm_ridge', type=float, default=1e-8, help='ridge for G stabilization')
