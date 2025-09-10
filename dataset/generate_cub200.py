@@ -62,10 +62,6 @@ np.random.seed(1)
 num_clients = 20
 dir_path = "CUB_200_2011/"
 
-# ---------------------------------------------------------------------------
-# Dataset wrapper
-# ---------------------------------------------------------------------------
-
 # https://github.com/QinbinLi/MOON/blob/6c7a4ed1b1a8c0724fa2976292a667a828e3ff5d/datasets.py#L148
 class ImageFolder_custom(DatasetFolder):
     """
