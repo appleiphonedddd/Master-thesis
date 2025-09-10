@@ -14,6 +14,8 @@ We propose a PFL, a plug-and-play extension of FedAS that targets the late-round
     - [Author](#author)
 
 ### Getting Started
+![](docs/imgs/structure.png)
+Figure 1: An Example for FedAvg. You can create a scenario using `generate_DATA.py` and run an algorithm using `main.py`, `clientNAME.py`, and `serverNAME.py`. For a new algorithm, you only need to add new features in `clientNAME.py` and `serverNAME.py`.
 
 ###### Requirements
 
