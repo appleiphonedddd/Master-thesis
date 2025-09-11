@@ -103,6 +103,8 @@ def run(args):
                 args.model = Digit5CNN().to(args.device)
             elif "MiniImagenet" in args.dataset:
                 args.model = FedAvgCNN(in_features=3, num_classes=args.num_classes, dim=20736).to(args.device)
+            elif "COIL100" in args.dataset:
+                args.model = FedAvgCNN(in_features=3, num_classes=args.num_classes, dim=53824).to(args.device)
             else:
                 args.model = FedAvgCNN(in_features=3, num_classes=args.num_classes, dim=10816).to(args.device)
 
