@@ -64,7 +64,7 @@ Figure 1: An Example for FedAvg. You can create a scenario using `generate_DATA.
 
 ###### Requirements
 
-- **Operating System**: Ubuntu 24.04.02 LTS (Linux-based)
+- **Operating System**: Ubuntu 24.04.03 LTS (Linux-based)
 - **GPU**: NVIDIA GeForce RTX 3060 (or higher, CUDA-enabled)
 - **CUDA Toolkit**: 12.x (compatible with your GPU driver)
 
