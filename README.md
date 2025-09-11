@@ -115,7 +115,7 @@ For instance
 ```sh
 python plot_metric.py practical/Cifar10/Acc/FedAS.csv practical/Cifar10/Acc/FedAvg.csv practical/Cifar10/Acc/FedDodm.csv practical/Cifar10/Acc/DCPFL.csv --metric test_acc --smooth 5 --output acc.png
 
-python plot_metric.py practical/Cifar10/Acc/FedAS.csv practical/Cifar10/Acc/FedAvg.csv practical/Cifar10/Acc/FedDodm.csv practical/Cifar10/Acc/DCPFL.csv --metric train_loss --smooth 5 --output loss.png
+python plot_metric.py practical/Cifar10/Loss/FedAS.csv practical/Cifar10/Loss/FedAvg.csv practical/Cifar10/Loss/FedDodm.csv practical/Cifar10/Loss/DCPFL.csv --metric train_loss --smooth 5 --output loss.png
 ```
 
 ### Extend new algorithms and datasets
