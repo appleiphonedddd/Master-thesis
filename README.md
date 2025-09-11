@@ -91,7 +91,7 @@ conda activate PFL
 
 **Pathological non-IID**: In this case, each client only holds a subset of the labels, for example, just 2 out of 10 labels from the FashionMNIST dataset, even though the overall dataset contains all 10 labels. This leads to a highly skewed distribution of data across clients.
 
-**Practical(Dirichlet) non-IID**:  
+**Practical (Dirichlet) non-IID**:  
 In this case, clients still have access to samples from all labels, but the data exhibits more realistic and nuanced heterogeneity in how it's distributed or generated. We simulate this using two main strategies:
 
    - **Label distribution skew**  
