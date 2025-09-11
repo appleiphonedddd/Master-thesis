@@ -1,17 +1,62 @@
-# Drift-Aware Alignment and Fisher-Weighted Aggregation for Robust Personalized FL
+<h1 align="center">
+  <i>Drift-Aware Alignment and Fisher-Weighted Aggregation for Robust Personalized FL</i>
+</h1>
 
-We propose a PFL, a plug-and-play extension of FedAS that targets the late-round accuracy drop and instability observed on high-class, highly non-IID federated workloads. FedAS-Stable introduces (i) adaptive alignment that modulates the per-client alignment strength each round using a lightweight drift signal computed from representation cosine/KL on a small anchor set; (ii) robust FIM weighting, which stabilizes t-FIM–based aggregation via EMA smoothing and percentile clipping; and (iii) a two-phase schedule that freezes shallow layers and decays learning rate around the onset of instability to prevent over-alignment. Across MNIST, FashionMNIST, CIFAR-10/100, and Tiny-ImageNet under Dirichlet α=0.1 with small CNNs and standard participation regimes, FedAS-Stable consistently improves personalized and global accuracy, increases the accuracy–round AUC, reduces rounds to 95% of final accuracy, and lowers tail variance versus FedAS and strong personalized baselines. The method adds minimal overhead, requires no extra communication, and is orthogonal to other personalization techniques.
+## :mag: Overview
+
+### 🚀 FedAS-Stable: A Plug-and-Play PFL Extension
+
+We propose **FedAS-Stable**, a plug-and-play extension of **FedAS** designed to address  
+**late-round accuracy drop** and **instability** on high-class, highly non-IID federated workloads.
+
+---
+
+### 🔑 Key Contributions
+
+#### 1️⃣ Adaptive Alignment
+- ⚖️ Dynamically modulates **per-client alignment strength** each round  
+- 🧭 Uses a lightweight **drift signal** computed from:
+  - 📐 Representation cosine similarity  
+  - 📊 KL divergence on a small anchor set  
+
+---
+
+#### 2️⃣ Robust FIM Weighting
+- 🛡️ Stabilizes **t-FIM–based aggregation** with:
+  - 📉 **EMA smoothing** (Exponential Moving Average)  
+  - ✂️ **Percentile clipping** to prevent outlier explosion  
+
+---
+
+#### 3️⃣ Two-Phase Training Schedule
+- ⏸️ **Phase I**: Freeze shallow layers at onset of instability  
+- 🔽 **Phase II**: Apply **learning rate decay** to mitigate over-alignment and preserve generalization  
+
+---
+
+### ✨ Highlights
+- 🔌 **Plug-and-play**: Drop-in extension to existing FedAS pipelines  
+- 🧩 **Stability-oriented**: Specifically targets late-round collapse in federated training  
+- 🪶 **Lightweight**: Minimal overhead; only small anchor-set computation required  
+
+---
 
 ## Contents
 
-- [Drift-Aware Alignment and Fisher-Weighted Aggregation for Robust Personalized FL](#drift-aware-alignment-and-fisher-weighted-aggregation-for-robust-personalized-fl)
-  - [Contents](#contents)
-    - [Getting Started](#getting-started)
-          - [Requirements](#requirements)
-          - [Installation](#installation)
-    - [Deployment](#deployment)
-    - [Extend new algorithms and datasets](#extend-new-algorithms-and-datasets)
-    - [Author](#author)
+- [:mag: Overview](#mag-overview)
+  - [🚀 FedAS-Stable: A Plug-and-Play PFL Extension](#-fedas-stable-a-plug-and-play-pfl-extension)
+  - [🔑 Key Contributions](#-key-contributions)
+    - [1️⃣ Adaptive Alignment](#1️⃣-adaptive-alignment)
+    - [2️⃣ Robust FIM Weighting](#2️⃣-robust-fim-weighting)
+    - [3️⃣ Two-Phase Training Schedule](#3️⃣-two-phase-training-schedule)
+  - [✨ Highlights](#-highlights)
+- [Contents](#contents)
+  - [Getting Started](#getting-started)
+        - [Requirements](#requirements)
+        - [Installation](#installation)
+  - [Deployment](#deployment)
+  - [Extend new algorithms and datasets](#extend-new-algorithms-and-datasets)
+  - [Author](#author)
 
 ### Getting Started
 ![](docs/imgs/structure.png)
