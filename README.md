@@ -85,6 +85,8 @@ python main.py -data Cifar100 -ncl 100 -m CNN -algo FedAvg -gr 600 -did 0
 
 python main.py -data COIL100 -ncl 100 -m CNN -algo FedAvg -gr 600 -did 0
 
+python main.py -data Food101 -ncl 101 -m CNN -algo FedAvg -gr 600 -did 0
+
 python main.py -data FGVC_Aircraft -ncl 100 -m CNN -algo FedAvg -gr 600 -did 0
 
 python main.py -data Flowers102 -ncl 102 -m CNN -algo FedAvg -gr 600 -did 0
