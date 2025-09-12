@@ -72,14 +72,14 @@ dir_path = "OfficeHome/"
 
 # ---- Domain helpers ----
 
-_CANONICAL_DOMAINS = {
+CANONICAL_DOMAINS = {
     "art": ["Art"],
     "clipart": ["Clipart", "Clip Art"],
     "product": ["Product"],
     "real": ["Real World", "Real_World", "Real-World", "RealWorld"],
 }
 
-def _find_dataset_root(raw_root: str):
+def find_dataset_root(raw_root: str):
     """
     Returns the path that contains the domain subfolders (Art/Clipart/Product/Real*).
     Search common unzip patterns and allow manual env override.
@@ -106,7 +106,7 @@ def _find_dataset_root(raw_root: str):
     # Pick the one that contains at least 2 domain dirs
     def has_domains(cand: str) -> bool:
         found = 0
-        for variants in _CANONICAL_DOMAINS.values():
+        for variants in CANONICAL_DOMAINS.values():
             if any(os.path.isdir(os.path.join(cand, v)) for v in variants):
                 found += 1
         return found >= 2
@@ -130,13 +130,13 @@ def _resolve_domain_dirs(dataset_root: str, domain_choice: str):
     domain_choice = (domain_choice or "all").lower()
     chosen = []
     if domain_choice == "all":
-        keys = list(_CANONICAL_DOMAINS.keys())
+        keys = list(CANONICAL_DOMAINS.keys())
     else:
-        if domain_choice not in _CANONICAL_DOMAINS:
+        if domain_choice not in CANONICAL_DOMAINS:
             raise ValueError(f"Unknown domain '{domain_choice}'. Use one of ['art','clipart','product','real','all'].")
         keys = [domain_choice]
     for k in keys:
-        variants = _CANONICAL_DOMAINS[k]
+        variants = CANONICAL_DOMAINS[k]
         for v in variants:
             p = os.path.join(dataset_root, v)
             if os.path.isdir(p):
@@ -185,7 +185,7 @@ class ImageFolderWithGlobalMap(Dataset):
 
 # ---- Download convenience ----
 
-def _try_download_officehome(raw_root: str):
+def try_download_officehome(raw_root: str):
     """
     Best-effort Google Drive download using gdown (fuzzy URL parsing).
     If a zip already exists under raw_root, try unzipping it.
@@ -232,7 +232,7 @@ def _try_download_officehome(raw_root: str):
 
 # ---- Core generation ----
 
-def _build_global_class_map(domain_dirs):
+def build_global_class_map(domain_dirs):
     """Scan all domain dirs to construct a global class_to_idx mapping (sorted by name)."""
     class_names = set()
     for d in domain_dirs:
@@ -277,17 +277,17 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition, domain_cho
     os.makedirs(raw_root, exist_ok=True)
 
     env_root = os.environ.get("OFFICEHOME_DATASET_DIR")
-    dataset_root = _find_dataset_root(env_root) if env_root else None
+    dataset_root = find_dataset_root(env_root) if env_root else None
     if dataset_root is None:
-        dataset_root = _find_dataset_root(raw_root)
+        dataset_root = find_dataset_root(raw_root)
     if dataset_root is None:
         print("[info] Office-Home not found under", raw_root)
         print("[info] Attempting to download via Google Drive (requires internet + gdown)...")
-        _try_download_officehome(raw_root)
+        try_download_officehome(raw_root)
         env_root = os.environ.get("OFFICEHOME_DATASET_DIR")
-    dataset_root = _find_dataset_root(env_root) if env_root else None
+    dataset_root = find_dataset_root(env_root) if env_root else None
     if dataset_root is None:
-        dataset_root = _find_dataset_root(raw_root)
+        dataset_root = find_dataset_root(raw_root)
         if dataset_root is None:
             raise FileNotFoundError(
                 "Office-Home dataset not found.\n"
@@ -308,7 +308,7 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition, domain_cho
     ])
 
     # Global label mapping (65 classes)
-    global_class_to_idx = _build_global_class_map(domain_dirs)
+    global_class_to_idx = build_global_class_map(domain_dirs)
     num_classes = len(global_class_to_idx)
     print(f'Number of classes: {num_classes} (expected ~65)  |  Domains used: {len(domain_dirs)}')
 
@@ -359,7 +359,6 @@ def generate_dataset(dir_path, num_clients, niid, balance, partition, domain_cho
     os.makedirs(os.path.join(dir_path, 'figures'), exist_ok=True)
     fig.savefig(os.path.join(dir_path, 'figures', 'client_data_distribution.png'))
     plt.close(fig)
-
 
 if __name__ == "__main__":
     # Parse CLI (compatible with other generators)
