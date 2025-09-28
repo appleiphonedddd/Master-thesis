@@ -57,7 +57,7 @@ def main():
         y = pd.Series(df[args.metric].astype(float).values)
 
         y_plot = ema(y, args.ema) if args.ema > 0 else y
-        label = os.path.splitext(os.path.basename(csv_path))[0]  # 只顯示方法（檔名）
+        label = os.path.splitext(os.path.basename(csv_path))[0]
         color = colors[idx % len(colors)]
 
         plt.plot(x, y_plot, label=label, linewidth=1.8, color=color)
