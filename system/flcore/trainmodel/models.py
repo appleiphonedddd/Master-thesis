@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 from torch import nn
-
+from flcore.loralib import layers as lora
 batch_size = 10
 
 # split an original model into a base and a head
@@ -148,6 +148,44 @@ class FedAvgCNN(nn.Module):
         out = self.fc(out)
         return out
 
+class FedAvgCNN_Lora(nn.Module):
+    def __init__(self, in_features=1, num_classes=10, rank=4, lora_alpha=16, lora_dropout=0.05):
+        super().__init__()
+        self.conv1 = nn.Sequential(
+            lora.Conv2d(in_features,
+                        32,
+                        kernel_size=5,
+                        rank=rank, 
+                        lora_alpha=lora_alpha,
+                        lora_dropout=lora_dropout),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=(2, 2))
+        )
+        self.conv2 = nn.Sequential(
+            lora.Conv2d(32,
+                        64,
+                        kernel_size=5,
+                        rank=rank, 
+                        lora_alpha=lora_alpha, 
+                        lora_dropout=lora_dropout),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=(2, 2))
+        )
+        self.fc1 = None
+        self.fc = lora.LoRALinear(512, num_classes, rank=rank, lora_alpha=lora_alpha, lora_dropout=lora_dropout)
+    
+    def forward(self, x):
+        out = self.conv1(x)
+        out = self.conv2(out)
+        out = torch.flatten(out, 1)
+        if self.fc1 is None:
+            in_dim = out.shape[1]
+            self.fc1 = nn.Sequential(
+                lora.LoRALinear(in_dim, 512), nn.ReLU(inplace=True)
+            ).to(out.device)
+        out = self.fc1(out)
+        out = self.fc(out)
+        return out
 # ====================================================================================================================
 
 # https://github.com/katsura-jp/fedavg.pytorch/blob/master/src/models/mlp.py

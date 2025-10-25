@@ -91,7 +91,10 @@ def run(args):
                 args.model = Mclr_Logistic(3*32*32, num_classes=args.num_classes).to(args.device)
             else:
                 args.model = Mclr_Logistic(60, num_classes=args.num_classes).to(args.device)
-
+        elif model_str == "CNNLoRA":
+            if "MNIST" in args.dataset:
+                args.model = FedAvgCNN_Lora(in_features=1, num_classes=args.num_classes).to(args.device)
+        
         elif model_str == "CNN": # non-convex
             if "MNIST" in args.dataset:
                 args.model = FedAvgCNN(in_features=1, num_classes=args.num_classes, dim=1024).to(args.device)
@@ -367,6 +370,9 @@ def run(args):
             server = DCPFL(args, i)
         
         elif args.algorithm == "FedINF":
+            args.head = copy.deepcopy(args.model.fc)
+            args.model.fc = nn.Identity()
+            args.model = BaseHeadSplit(args.model, args.head)
             server = FedINF(args, i)
 
         else:

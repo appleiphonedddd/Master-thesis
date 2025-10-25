@@ -16,7 +16,7 @@ class LoRALayer():
         else:
             self.lora_dropout = lambda x: x
 
-        self.merge = False
+        self.merged = False
         self.merge_weights = merge_weights
 
 class LoRALinear(nn.Linear, LoRALayer):
@@ -94,7 +94,7 @@ class ConvLoRA(nn.Module, LoRALayer):
                 self.conv.weight.new_zeros((rank * kernel_size, in_channels * kernel_size))
             )
             self.lora_B = nn.Parameter(
-              self.conv.weight.new_zeros((out_channels//self.conv.groups*kernel_size, rank*kernel_size))
+                self.conv.weight.new_zeros((out_channels//self.conv.groups*kernel_size, rank*kernel_size))
             )
             self.scaling = self.lora_alpha / self.rank
 
