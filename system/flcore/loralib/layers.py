@@ -70,7 +70,7 @@ class LoRALinear(nn.Linear, LoRALayer):
 
         if mode:
             if self.merge_weights and self.merged:
-                if self.r > 0:
+                if self.rank > 0:
                     self.weight.data -= T(self.lora_B @ self.lora_A) * self.scaling
                 self.merged = False
         else:

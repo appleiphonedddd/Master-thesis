@@ -6,6 +6,7 @@ import time
 import copy
 from flcore.clients.clientbase import Client
 from torch.autograd import grad
+from utils.INF import mark_only_lora_as_trainable
 
 class clientINF(Client):
 
@@ -62,14 +63,15 @@ class clientINF(Client):
                 nll = -torch.nn.functional.log_softmax(outputs, dim=1)[range(len(y)), y].mean()
 
                 # Compute gradient of the negative log likelihood w.r.t. model parameters
-                grads = grad(nll, self.model.parameters())
+                grads = grad(nll, [p for p in self.model.parameters() if p.requires_grad], retain_graph=True, allow_unused=True)
 
                 # Compute and accumulate the trace of the Fisher Information Matrix
-                for g in grads:
-                    fim_trace_sum += torch.sum(g ** 2).detach()
+                for p in self.model.parameters():
+                    if p.requires_grad and p.grad is not None:
+                        fim_trace_sum += p.grad.detach().pow(2).sum().item()
 
             # add the fisher log
-            self.fim_trace_history.append(fim_trace_sum.item())
+            self.fim_trace_history.append(fim_trace_sum)
 
         else:
             trainloader = self.load_train_data()
@@ -87,14 +89,15 @@ class clientINF(Client):
                 nll = -torch.nn.functional.log_softmax(outputs, dim=1)[range(len(y)), y].mean()
 
                 # Compute gradient of the negative log likelihood w.r.t. model parameters
-                grads = grad(nll, self.model.parameters())
+                grads = grad(nll, [p for p in self.model.parameters() if p.requires_grad], retain_graph=True, allow_unused=True)
 
                 # Compute and accumulate the trace of the Fisher Information Matrix
-                for g in grads:
-                    fim_trace_sum += torch.sum(g ** 2).detach()
+                for p in self.model.parameters():
+                    if p.requires_grad and p.grad is not None:
+                        fim_trace_sum += p.grad.detach().pow(2).sum().item()
 
             # add the fisher log
-            self.fim_trace_history.append(fim_trace_sum.item())
+            self.fim_trace_history.append(fim_trace_sum)
 
     def evaluate(self):
         testloader = self.load_test_data()
@@ -114,59 +117,33 @@ class clientINF(Client):
     
     def set_parameters(self, model, progress):
 
-        # Get class-specific prototypes from the local model
-        local_prototypes = [[] for _ in range(self.num_classes)]
-        batch_size = 16  # or any other suitable value
-        trainloader = self.load_train_data(batch_size=batch_size)
+        with torch.no_grad():
+            for new_p, old_p in zip(model.base.parameters(), self.model.base.parameters()):
+                old_p.data.copy_(new_p.data)
 
-        # print(f'client{id}')
-        for x_batch, y_batch in trainloader:
-            x_batch = x_batch.to(self.device)
-            y_batch = y_batch.to(self.device)
+        self.model.train()
+        align_loader = self.load_train_data(batch_size=16)
+        mse = nn.MSELoss()
 
-            with torch.no_grad():
-                proto_batch = self.model.base(x_batch)
+        align_opt = torch.optim.SGD(self.model.base.parameters(), lr=0.01)
 
-            # Scatter the prototypes based on their labels
-            for proto, y in zip(proto_batch, y_batch):
-                local_prototypes[y.item()].append(proto)
+        teacher_base = copy.deepcopy(self.model.base).to(self.device).eval()
 
-        mean_prototypes = []
-
-        # print(f'client{self.id}')
-        for class_prototypes in local_prototypes:
-
-            if not class_prototypes == []:
-                # Stack the tensors for the current class
-                stacked_protos = torch.stack(class_prototypes)
-
-                # Compute the mean tensor for the current class
-                mean_proto = torch.mean(stacked_protos, dim=0)
-                mean_prototypes.append(mean_proto)
-            else:
-                mean_prototypes.append(None)
-
-        # Align global model's prototype with the local prototype
-        alignment_optimizer = torch.optim.SGD(model.base.parameters(), lr=0.01)  # Adjust learning rate and optimizer as needed
-        alignment_loss_fn = torch.nn.MSELoss()
-
-        # print(f'client{self.id}')
-        for _ in range(1):  # Iterate for 1 epochs; adjust as needed
-            for x_batch, y_batch in trainloader:
-                x_batch = x_batch.to(self.device)
-                y_batch = y_batch.to(self.device)
-                global_proto_batch = model.base(x_batch)
-                loss = 0
-                for label in y_batch.unique():
-                    if mean_prototypes[label.item()] is not None:
-                        loss += alignment_loss_fn(global_proto_batch[y_batch == label], mean_prototypes[label.item()])
-                alignment_optimizer.zero_grad()
+        for _ in range(1):
+            for xb, _ in align_loader:
+                xb = xb.to(self.device)
+                with torch.no_grad():
+                    h_old = teacher_base(xb)
+                h_new = self.model.base(xb)
+                loss = mse(h_new, h_old)
+                align_opt.zero_grad()
                 loss.backward()
-                alignment_optimizer.step()
+                align_opt.step()
 
-        # Substitute the parameters of the base, enabling personalization
-        for new_param, old_param in zip(model.base.parameters(), self.model.base.parameters()):
-            old_param.data = new_param.data.clone()
-
-
-        # end
+        for p in self.model.head.parameters():
+            p.requires_grad = True
+        mark_only_lora_as_trainable(self.model.base, bias='lora_only')
+        
+        optim_params = [p for p in self.model.parameters() if p.requires_grad]
+    
+        self.optimizer = torch.optim.SGD(optim_params, lr=self.learning_rate, momentum=0.9)

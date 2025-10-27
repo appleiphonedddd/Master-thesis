@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from typing import Dict
-from flcore.loralib import LoRALayer
+from flcore.loralib.layers import LoRALayer
 
 def mark_only_lora_as_trainable(model: nn.Module, bias: str = 'none') -> None:
     for n, p in model.named_parameters():
