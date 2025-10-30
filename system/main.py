@@ -94,6 +94,10 @@ def run(args):
         elif model_str == "CNNLoRA":
             if "MNIST" in args.dataset:
                 args.model = FedAvgCNN_Lora(in_features=1, num_classes=args.num_classes).to(args.device)
+            elif "Cifar10" in args.dataset:
+                args.model = FedAvgCNN_Lora(in_features=3, num_classes=args.num_classes).to(args.device)
+            else:
+                args.model = FedAvgCNN_Lora(in_features=3, num_classes=args.num_classes).to(args.device)
         
         elif model_str == "CNN": # non-convex
             if "MNIST" in args.dataset:

@@ -149,7 +149,7 @@ class FedAvgCNN(nn.Module):
         return out
 
 class FedAvgCNN_Lora(nn.Module):
-    def __init__(self, in_features=1, num_classes=10, rank=4, lora_alpha=16, lora_dropout=0.05):
+    def __init__(self, in_features=1, num_classes=10, rank=16, lora_alpha=16, lora_dropout=0.05):
         super().__init__()
         self.conv1 = nn.Sequential(
             lora.Conv2d(in_features,
