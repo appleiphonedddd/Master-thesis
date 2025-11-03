@@ -91,7 +91,7 @@ def run(args):
                 args.model = Mclr_Logistic(3*32*32, num_classes=args.num_classes).to(args.device)
             else:
                 args.model = Mclr_Logistic(60, num_classes=args.num_classes).to(args.device)
-        elif model_str == "CNNLoRA":
+        elif model_str == "CNNFreeze":
             if "MNIST" in args.dataset:
                 args.model = FedAvgCNN_Lora(in_features=1, num_classes=args.num_classes).to(args.device)
             elif "Cifar10" in args.dataset:
