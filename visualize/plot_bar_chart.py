@@ -3,15 +3,14 @@ import numpy as np
 
 def plot_accuracy(methods, datasets, accuracy):
     accuracy = np.array(accuracy)
-    x = np.arange(len(datasets))
+    x = np.arange(len(datasets)) * 1.1
     width = 0.2
-    fig, ax = plt.subplots(figsize=(12, 6))
+    fig, ax = plt.subplots(figsize=(15, 6))
 
-    # 自訂配色
-    colors = ['#FF7F0E', '#2CA02C', '#1F77B4', '#D62728']
+    colors = ['#FF7F0E', '#2CA02C', '#1F77B4', '#D62728', '#9467BD']
 
     for i, method in enumerate(methods):
-        if method == "FedAS":
+        if method == "FedINF":
             bars = ax.bar(x + i*width, accuracy[i], width,
                           label=method, color=colors[i],
                           edgecolor='black', linewidth=1.5, alpha=1.0)
@@ -41,13 +40,14 @@ def plot_accuracy(methods, datasets, accuracy):
     plt.savefig('Bar_chart.png', dpi=300)
     print("[Info] Saved accuracy comparison plot to Bar_chart.png")
 
-methods = ['FedAvg', 'FedDodm', 'FedAS', 'DCPFL']
+methods = ['FedAvg', 'FedDodm', 'FedAS', 'DCPFL', 'FedINF']
 datasets = ['MNIST','FMNIST', 'CIFAR10', 'CIFAR100', 'Tiny-ImageNet']
 accuracy = [
     [98.18, 85.80, 56.68, 32.48, 19.66],  # FedAvg
     [99.65, 97.57, 89.90, 56.52, 37.66],  # FedDodm
     [99.68, 97.74, 91.55, 59.78, 40.09],  # FedAS
-    [99.25, 97.36, 89.55, 46.88, 27.00]   # DCPFL
+    [99.25, 97.36, 89.55, 46.88, 27.00],  # DCPFL
+    [99.72, 97.90, 92.20, 61.74, 42.01]   # FedINF
 ]
 
 plot_accuracy(methods, datasets, accuracy)
