@@ -66,10 +66,9 @@ class clientINF(Client):
                 grads = grad(nll, [p for p in self.model.parameters() if p.requires_grad], retain_graph=True, allow_unused=True)
 
                 # Compute and accumulate the trace of the Fisher Information Matrix
-                for p in self.model.parameters():
-                    if p.requires_grad and p.grad is not None:
-                        fim_trace_sum += p.grad.detach().pow(2).sum().item()
-
+                for g, p in zip(grads, [p for p in self.model.parameters() if p.requires_grad]):
+                    if g is not None:
+                        fim_trace_sum += g.pow(2).sum().item()
             # add the fisher log
             self.fim_trace_history.append(fim_trace_sum)
 
@@ -92,9 +91,9 @@ class clientINF(Client):
                 grads = grad(nll, [p for p in self.model.parameters() if p.requires_grad], retain_graph=True, allow_unused=True)
 
                 # Compute and accumulate the trace of the Fisher Information Matrix
-                for p in self.model.parameters():
-                    if p.requires_grad and p.grad is not None:
-                        fim_trace_sum += p.grad.detach().pow(2).sum().item()
+                for g, p in zip(grads, [p for p in self.model.parameters() if p.requires_grad]):
+                    if g is not None:
+                        fim_trace_sum += g.pow(2).sum().item()
 
             # add the fisher log
             self.fim_trace_history.append(fim_trace_sum)
