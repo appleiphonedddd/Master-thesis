@@ -9,12 +9,14 @@ from torch.autograd import grad
 
 class clientFIP(Client):
 
-
     def __init__(self, args, id, train_samples, test_samples, **kwargs):
         super().__init__(args, id, train_samples, test_samples, **kwargs)
-        self.global_protos = None
+        
         self.alpha = args.alpha
         self.fim_trace_history = []
+
+        self.global_protos = None
+        self.local_protos = None
 
     def train(self, is_selected):
         if is_selected:
@@ -89,6 +91,7 @@ class clientFIP(Client):
 
             # add the fisher log
             self.fim_trace_history.append(fim_trace_sum.item())
+            self.compute_local_prototypes()
 
             # Evaluate on the client's test dataset
             # test_acc = self.evaluate()
@@ -118,11 +121,54 @@ class clientFIP(Client):
 
             # add the fisher log
             self.fim_trace_history.append(fim_trace_sum.item())
-
+            self.compute_local_prototypes()
             # Evaluate on the client's test dataset
             # test_acc = self.evaluate()
             # print(f"Client {self.id}, Test Accuracy: {test_acc:.1f}, FIM-T value: {fim_trace_sum.item():.1f}")
             # print(f"FIM-T value change: {(self.fim_trace_history[-1] - (self.fim_trace_history[-2] if len(self.fim_trace_history) > 1 else 0)):.1f}")
+
+    def compute_local_prototypes(self):
+
+        if not hasattr(self.model, "base"):
+            self.local_protos = None
+            return
+        
+        trainloader = self.load_train_data()
+        feats_by_class = [[] for _ in range(self.num_classes)]
+
+        self.model.eval()
+        with torch.no_grad():
+            for x_batch, y_batch in trainloader:
+                if type(x_batch) == type([]):
+                    x_batch[0] = x_batch[0].to(self.device)
+                    feats = self.model.base(x_batch[0])
+                else:
+                    x_batch = x_batch.to(self.device)
+                    feats = self.model.base(x_batch)
+                y_batch = y_batch.to(self.device)
+
+                for f, label in zip(feats, y_batch):
+                    feats_by_class[label.item()].append(f.detach().clone())
+
+        feat_dim = None
+        for lst in feats_by_class:
+            if len(lst) > 0:
+                feat_dim = lst[0].numel()
+                break
+
+        if feat_dim is None:
+            self.local_protos = None
+            return
+
+        protos = []
+        for lst in feats_by_class:
+            if len(lst) > 0:
+                stack = torch.stack(lst, dim=0)
+                protos.append(stack.mean(dim=0))
+            else:
+                protos.append(torch.zeros(feat_dim, device=self.device))
+
+        self.local_protos = torch.stack(protos, dim=0)
 
     def evaluate(self):
         testloader = self.load_test_data()
@@ -145,7 +191,7 @@ class clientFIP(Client):
         # for new_param, old_param in zip(model.base.parameters(), self.model.base.parameters()):
         #     old_param.data = new_param.data.clone()
 
-    def set_parameters(self, model, progress):
+    def set_parameters(self, model, progress,global_protos):
 
         # Get class-specific prototypes from the local model
         local_prototypes = [[] for _ in range(self.num_classes)]
@@ -201,5 +247,5 @@ class clientFIP(Client):
         for new_param, old_param in zip(model.base.parameters(), self.model.base.parameters()):
             old_param.data = new_param.data.clone()
 
-
+        self.global_protos = global_protos
         # end

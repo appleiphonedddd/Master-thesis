@@ -5,19 +5,16 @@ import torch
 from flcore.clients.clientfip import clientFIP
 from flcore.servers.serverbase import Server
 
-
 class FedFIP(Server):
     def __init__(self, args, times):
         super().__init__(args, times)
 
-        # select slow clients
         self.set_slow_clients()
         self.set_clients(clientFIP)
         self.global_protos = None
         print(f"\nJoin ratio / total clients: {self.join_ratio} / {self.num_clients}")
         print("Finished creating server and clients.")
 
-        # self.load_model()
         self.Budget = []
 
     def all_clients(self):
@@ -26,13 +23,12 @@ class FedFIP(Server):
     def send_selected_models(self, selected_ids, epoch):
         assert (len(self.clients) > 0)
 
-        # for client in self.clients:
         for client in [client for client in self.clients if (client.id in selected_ids)]:
             start_time = time.time()
 
             progress = epoch / self.global_rounds
             
-            client.set_parameters(copy.deepcopy(self.global_model), progress)
+            client.set_parameters(copy.deepcopy(self.global_model), progress, self.global_protos)
 
             client.send_time_cost['num_rounds'] += 1
             client.send_time_cost['total_cost'] += 2 * (time.time() - start_time)    
@@ -44,11 +40,10 @@ class FedFIP(Server):
         for param in self.global_model.parameters():
             param.data.zero_()
 
-        # calculate the aggregrate weight with respect to the FIM value of model
         FIM_weight_list = []
         for id in self.uploaded_ids:
             FIM_weight_list.append(self.clients[id].fim_trace_history[-1])
-        # normalization to obtain weight
+
         FIM_weight_list = [FIM_value/sum(FIM_weight_list) for FIM_value in FIM_weight_list]
 
         for w, client_model in zip(FIM_weight_list, self.uploaded_models):
@@ -62,29 +57,14 @@ class FedFIP(Server):
 
             selected_ids = [client.id for client in self.selected_clients]
 
-
-            # self.send_models()
-
-            # evaluate personalized models, ie FedAvg-C
             if i%self.eval_gap == 0:
                 print(f"\n-------------Round number: {i}-------------")
-                #print("\nEvaluate global model")
                 self.evaluate()
 
-            # self.send_models()
             self.send_selected_models(selected_ids, i)
 
-            # print(f'send selected models done')
-
-            # for client in self.selected_clients:
-            #     client.train()
-        
-
             for client in self.alled_clients:
-                # print("===============")
                 client.train(client.id in selected_ids)
-            # assert 1==0
-
 
             self.print_fim_histories()
 
