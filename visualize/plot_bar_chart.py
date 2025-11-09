@@ -40,14 +40,14 @@ def plot_accuracy(methods, datasets, accuracy):
     plt.savefig('Bar_chart.png', dpi=300)
     print("[Info] Saved accuracy comparison plot to Bar_chart.png")
 
-methods = ['FedAvg', 'FedDodm', 'FedAS', 'DCPFL', 'FedINF']
+methods = ['FedAvg', 'FedDodm', 'FedAS', 'DCPFL', 'FedSM']
 datasets = ['MNIST','FMNIST', 'CIFAR10', 'CIFAR100', 'Tiny-ImageNet']
 accuracy = [
     [98.18, 85.80, 56.68, 32.48, 19.66],  # FedAvg
     [99.65, 97.57, 89.90, 56.52, 37.66],  # FedDodm
     [99.68, 97.74, 91.55, 59.78, 40.09],  # FedAS
     [99.25, 97.36, 89.55, 46.88, 27.00],  # DCPFL
-    [99.67, np.NaN, np.NaN, np.NaN, np.NaN]   # FedINF
+    [99.67, 97.92, np.NaN, np.NaN, np.NaN]   # FedSM
 ]
 
 plot_accuracy(methods, datasets, accuracy)
