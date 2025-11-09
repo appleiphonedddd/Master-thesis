@@ -55,6 +55,7 @@ from flcore.servers.servercross import FedCross
 from flcore.servers.serverDCPFL import DCPFL
 from flcore.servers.serverinf import FedINF
 from flcore.servers.servercpd import FedCPD
+from flcore.servers.serverfip import FedFIP
 
 from flcore.trainmodel.models import *
 
@@ -385,7 +386,12 @@ def run(args):
             args.model.fc = nn.Identity()
             args.model = BaseHeadSplit(args.model, args.head)
             server = FedINF(args, i)
-
+        
+        elif args.algorithm == "FedFIP":
+            args.head = copy.deepcopy(args.model.fc)
+            args.model.fc = nn.Identity()
+            args.model = BaseHeadSplit(args.model, args.head)
+            server = FedFIP(args, i)
         else:
             raise NotImplementedError
 
