@@ -47,7 +47,7 @@ accuracy = [
     [99.65, 97.57, 89.90, 56.52, 37.66],  # FedDodm
     [99.68, 97.74, 91.55, 59.78, 40.09],  # FedAS
     [99.25, 97.36, 89.55, 46.88, 27.00],  # DCPFL
-    [99.41, 97.36, 88.52, 42.98, 25.09]   # FedINF
+    [99.67, np.NaN, np.NaN, np.NaN, np.NaN]   # FedINF
 ]
 
 plot_accuracy(methods, datasets, accuracy)
