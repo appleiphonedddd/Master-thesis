@@ -586,6 +586,7 @@ if __name__ == "__main__":
                         help="Learning rate for FedCALM")
     parser.add_argument('-cs', "--calm_steps", type=int, default=5,
                         help="Number of local steps for FedCALM")
+    
     args = parser.parse_args()
 
     os.environ["CUDA_VISIBLE_DEVICES"] = args.device_id
