@@ -56,6 +56,7 @@ from flcore.servers.serverDCPFL import DCPFL
 from flcore.servers.serverinf import FedINF
 from flcore.servers.servercpd import FedCPD
 from flcore.servers.serverfip import FedFIP
+from flcore.servers.servercalm import FedCALM
 
 from flcore.trainmodel.models import *
 
@@ -392,6 +393,13 @@ def run(args):
             args.model.fc = nn.Identity()
             args.model = BaseHeadSplit(args.model, args.head)
             server = FedFIP(args, i)
+        
+        elif args.algorithm == "FedCALM":
+            args.head = copy.deepcopy(args.model.fc)
+            args.model.fc = nn.Identity()
+            args.model = BaseHeadSplit(args.model, args.head)
+            server = FedCALM(args, i)
+        
         else:
             raise NotImplementedError
 
@@ -569,6 +577,15 @@ if __name__ == "__main__":
     parser.add_argument('-weps', "--wma_eps", type=float, default=0.01,
                         help="Mean relative |Δloss| threshold to deem 'stable' (e.g., 0.01 = 1%)")
 
+    # FedCALM
+    parser.add_argument('-ce', "--calm_epsilon", type=float, default=0.1,
+                        help="Epsilon parameter for FedCALM")
+    parser.add_argument('-cC', "--calm_C", type=float, default=1.0,
+                        help="Clipping norm for FedCALM")
+    parser.add_argument('-clr', "--calm_lr", type=float, default=0.01,
+                        help="Learning rate for FedCALM")
+    parser.add_argument('-cs', "--calm_steps", type=int, default=5,
+                        help="Number of local steps for FedCALM")
     args = parser.parse_args()
 
     os.environ["CUDA_VISIBLE_DEVICES"] = args.device_id
