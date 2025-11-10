@@ -4,10 +4,10 @@ import numpy as np
 def plot_accuracy(methods, datasets, accuracy):
     accuracy = np.array(accuracy)
     x = np.arange(len(datasets)) * 1.1
-    width = 0.2
+    width = 0.16
     fig, ax = plt.subplots(figsize=(15, 6))
 
-    colors = ['#FF7F0E', '#2CA02C', '#1F77B4', '#D62728', '#9467BD']
+    colors = ['#FF7F0E', '#2CA02C', '#1F77B4', '#D62728', '#9467BD',]
 
     for i, method in enumerate(methods):
         if method == "FedINF":
@@ -40,14 +40,14 @@ def plot_accuracy(methods, datasets, accuracy):
     plt.savefig('Bar_chart.png', dpi=300)
     print("[Info] Saved accuracy comparison plot to Bar_chart.png")
 
-methods = ['FedAvg', 'FedDodm', 'FedAS', 'DCPFL', 'FedSM']
+methods = ['FedAvg', 'FedDodm', 'FedAS', 'DCPFL', 'FedFIP']
 datasets = ['MNIST','FMNIST', 'CIFAR10', 'CIFAR100', 'Tiny-ImageNet']
 accuracy = [
-    [98.18, 85.80, 56.68, 32.48, 19.66],  # FedAvg
-    [99.65, 97.57, 89.90, 56.52, 37.66],  # FedDodm
-    [99.68, 97.74, 91.55, 59.78, 40.09],  # FedAS
-    [99.25, 97.36, 89.55, 46.88, 27.00],  # DCPFL
-    [99.67, 97.92, 91.56, 61.48, np.NaN]   # FedSM
+    [98.18, 85.80, 56.68, 32.48, 19.66],    # FedAvg
+    [99.65, 97.57, 89.90, 56.52, 37.66],    # FedDodm
+    [99.68, 97.74, 91.55, 59.78, 40.09],    # FedAS
+    [99.25, 97.36, 89.55, 46.88, 27.00],    # DCPFL
+    [99.68, np.NaN, 91.56, np.NaN, np.NaN] # FedFIP
 ]
 
 plot_accuracy(methods, datasets, accuracy)

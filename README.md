@@ -160,9 +160,10 @@ python plot_bar_chart.py
 For instance
 
 ```sh
-python plot_metric.py practical/FMNIST/Acc/FedAS.csv practical/FMNIST/Acc/FedAvg.csv practical/FMNIST/Acc/FedDodm.csv practical/FMNIST/Acc/DCPFL.csv practical/FMNIST/Acc/FedSM.csv --metric test_acc --ema 0.15 --output FMNIST_Acc.png
+python plot_metric.py practical/MNIST/Acc/FedAS.csv practical/MNIST/Acc/FedAvg.csv practical/MNIST/Acc/FedDodm.csv practical/MNIST/Acc/DCPFL.csv practical/MNIST/Acc/FedCPD.csv practical/MNIST/Acc/FedFIP.csv  --metric test_acc --ema 0.15 --output MNIST_Acc.png
 
-python plot_metric.py practical/MNIST/Loss/FedAS.csv practical/MNIST/Loss/FedAvg.csv practical/MNIST/Loss/FedDodm.csv practical/MNIST/Loss/DCPFL.csv practical/MNIST/Loss/FedSM.csv --metric train_loss --ema 0.15 --output FMNIST_Loss.png
+python plot_metric.py practical/MNIST/Loss/FedAS.csv practical/MNIST/Loss/FedAvg.csv practical/MNIST/Loss/FedDodm.csv practical/MNIST/Loss/DCPFL.csv practical/MNIST/Loss/FedCPD.csv practical/MNIST/Loss/FedFIP.csv  --metric train_loss --ema 0.15 --output MNIST_Loss.png
+
 ```
 
 ### Extend new algorithms and datasets
