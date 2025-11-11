@@ -74,7 +74,6 @@ class FedFIP(Server):
             if self.dlg_eval and i%self.dlg_gap == 0:
                 self.call_dlg(i)
 
-
             self.aggregate_wrt_fisher()
 
             self.Budget.append(time.time() - s_t)
@@ -84,8 +83,6 @@ class FedFIP(Server):
                 break
 
         print("\nBest accuracy.")
-        # self.print_(max(self.rs_test_acc), max(
-        #     self.rs_train_acc), min(self.rs_train_loss))
         print(max(self.rs_test_acc))
         print("\nAverage time cost per round.")
         print(sum(self.Budget[1:])/len(self.Budget[1:]))
@@ -123,6 +120,7 @@ class FedFIP(Server):
             return
 
         template = None
+
         for cid in self.uploaded_ids:
             lp = getattr(self.clients[cid], "local_protos", None)
             if lp is not None:
@@ -135,18 +133,22 @@ class FedFIP(Server):
         device = template.device
         num_classes, feat_dim = template.size()
 
+        # Aggregate prototypes from clients
         sum_protos = torch.zeros(num_classes, feat_dim, device=device)
         cnt_protos = torch.zeros(num_classes, device=device)
 
+        # Iterate through clients and sum their local prototypes
         for cid in self.uploaded_ids:
             lp = getattr(self.clients[cid], "local_protos", None)
             if lp is None:
                 continue
             lp = lp.to(device)
             
+            # Only consider classes present in the client's local prototypes
             mask = (lp.abs().sum(dim=1) > 0)
             sum_protos[mask] += lp[mask]
             cnt_protos[mask] += 1.0
 
+        # Compute global prototypes by averaging
         cnt_expand = cnt_protos.clamp_min(1.0).view(-1, 1)
         self.global_protos = sum_protos / cnt_expand
