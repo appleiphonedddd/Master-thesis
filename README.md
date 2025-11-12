@@ -1,43 +1,47 @@
 <h1 align="center">
-  <i>Drift-Aware Alignment and Fisher-Weighted Aggregation for Robust Personalized FL</i>
+  <i>FedFIP: Fisher-Weighted Aggregation and Prototype Integration for Personalized Federated Learning</i>
 </h1>
 
 ## :mag: Overview
 
-### 🚀 FedAS-Stable: A Plug-and-Play PFL Extension
+### 🚀 FedFIP: Bridging Fisher Weighting and Prototype Learning
 
-We propose **FedAS-Stable**, a plug-and-play extension of **FedAS** designed to address  
-**late-round accuracy drop** and **instability** on high-class, highly non-IID federated workloads.
+We propose **FedFIP**, a unified framework that extends **FedAS** by incorporating **class-wise prototype learning** inspired by **FedCPD**.  
+FedFIP enables each client to upload compact feature prototypes instead of raw data or full model parameters,  
+allowing the server to construct **global semantic centers** that guide subsequent local training.  
+This mechanism helps clients learn shared semantic knowledge across domains while retaining personalization.
 
 ---
 
 ### 🔑 Key Contributions
 
-#### 1️⃣ Adaptive Alignment
-- ⚖️ Dynamically modulates **per-client alignment strength** each round  
-- 🧭 Uses a lightweight **drift signal** computed from:
-  - 📐 Representation cosine similarity  
-  - 📊 KL divergence on a small anchor set  
+#### 1️⃣ Fisher-Weighted Global Aggregation  
+- 🧠 Leverages **Fisher Information Matrix (FIM)** to evaluate parameter reliability.  
+- ⚙️ Aggregates client updates via **softmax-weighted averaging**,  
+  allowing global parameters to move toward the most informative gradients.
 
 ---
 
-#### 2️⃣ Robust FIM Weighting
-- 🛡️ Stabilizes **t-FIM–based aggregation** with:
-  - 📉 **EMA smoothing** (Exponential Moving Average)  
-  - ✂️ **Percentile clipping** to prevent outlier explosion  
+#### 2️⃣ Prototype-Based Semantic Alignment  
+- 🌐 Clients compute per-class **feature prototypes** and upload them to the server.  
+- 🧩 The server averages same-class prototypes to form **global semantic centers**.  
+- 🔄 During local training, clients align their embeddings with these centers,  
+  achieving cross-client consistency and enhanced generalization.
 
 ---
 
-#### 3️⃣ Two-Phase Training Schedule
-- ⏸️ **Phase I**: Freeze shallow layers at onset of instability  
-- 🔽 **Phase II**: Apply **learning rate decay** to mitigate over-alignment and preserve generalization  
+#### 3️⃣ Personalized Generalization under Non-IID Settings  
+- 🪶 Enables each client to benefit from **shared class semantics** without leaking data.  
+- ⚖️ Balances **personalized head training** and **global backbone alignment**,  
+  ensuring stability across heterogeneous domains.
 
 ---
 
-### ✨ Highlights
-- 🔌 **Plug-and-play**: Drop-in extension to existing FedAS pipelines  
-- 🧩 **Stability-oriented**: Specifically targets late-round collapse in federated training  
-- 🪶 **Lightweight**: Minimal overhead; only small anchor-set computation required  
+### ✨ Highlights  
+- 🔌 **Plug-and-Play**: Compatible with any FedAS-based pipeline.  
+- 🧭 **Two-Level Learning**: Combines parameter-level reliability with feature-level semantic alignment.  
+- 🔐 **Privacy-Preserving**: Shares only low-dimensional prototypes, not raw samples.  
+- 🪶 **Lightweight**: Adds minimal communication overhead (≈0.1% of model size).  
 
 ---
 
