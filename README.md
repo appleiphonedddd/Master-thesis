@@ -6,8 +6,7 @@
 
 ### 🚀 FedFIP: Bridging Fisher Weighting and Prototype Learning
 
-We propose **FedFIP**, a unified framework that extends **FedAS** by incorporating **class-wise prototype learning** inspired by **Prototype-based learning**.  
-FedFIP enables each client to upload compact feature prototypes instead of raw data or full model parameters, allowing the server to construct **global semantic centers** that guide subsequent local training. This mechanism helps clients learn shared semantic knowledge across domains while retaining personalization.
+We propose **FedFIP**, a unified framework extending **FedAS** with **class-wise prototype learning**. Each client uploads lightweight feature prototypes, enabling the server to form **global semantic centers** that guide local updates. This design promotes cross-client knowledge sharing while preserving personalization under non-IID data.
 
 ---
 
