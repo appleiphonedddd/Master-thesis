@@ -3,9 +3,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import time
-import copy
+#import copy
 import math
-import os
+#import os
 from flcore.clients.clientbase import Client
 from utils.FLAYER import LocalAggregation
 
@@ -18,13 +18,14 @@ class clientFLayer(Client):
 
         self.model_str = getattr(args, "model_str", None)
         self.aggregate_params = []
+        self.args = args
 
         base_params = [{'params': self.model.parameters(), 'lr': self.local_learning_rate}]
 
         params = base_params
-        model_name = self.model.__class__.__name__
+        self.model_name = self.model.__class__.__name__
         
-        if model_name == "FedAvgCNN":
+        if self.model_name == "FedAvgCNN":
             params = [
                 {'params': list(self.model.parameters())[:2], 'lr': self.local_learning_rate},
                 {'params': list(self.model.parameters())[2:4], 'lr': self.local_learning_rate * 30},
@@ -52,6 +53,8 @@ class clientFLayer(Client):
                         x[0] = x[0].to(self.device)
                     else:
                         x = x.to(self.device)
+                    
+                    y = y.to(self.device)
                     if self.train_slow:
                         time.sleep(0.1 * np.abs(np.random.rand()))
                     
@@ -146,8 +149,7 @@ class clientFLayer(Client):
 
                     # Apply mask to the original parameter layer, after reshaping the mask back
                     # param_layer[mask.reshape(param_layer.shape)] = 0
-                    param_layer *= (mask.reshape(param_layer.shape))
-            
+                    param_layer *= (mask.reshape(param_layer.shape))           
 
             elif change_layer.ndim == 1:
                 element_num = change_layer.shape[0]

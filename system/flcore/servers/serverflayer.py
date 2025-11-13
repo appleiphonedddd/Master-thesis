@@ -1,5 +1,5 @@
 import time
-import copy
+#import copy
 import numpy as np
 from flcore.clients.clientflayer import clientFLayer
 from flcore.servers.serverbase import Server
@@ -24,8 +24,6 @@ class FedFlayer(Server):
 
         for client in [client for client in self.clients if (client.id in selected_ids)]:
             start_time = time.time()
-
-            #progress = epoch / self.global_rounds
 
             client.send_time_cost['num_rounds'] += 1
             client.send_time_cost['total_cost'] += 2 * (time.time() - start_time)
