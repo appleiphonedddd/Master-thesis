@@ -57,6 +57,7 @@ from flcore.servers.serverinf import FedINF
 from flcore.servers.servercpd import FedCPD
 from flcore.servers.serverfip import FedFIP
 from flcore.servers.servercalm import FedCALM
+from flcore.servers.serverflayer import FedFlayer
 
 from flcore.trainmodel.models import *
 
@@ -399,6 +400,9 @@ def run(args):
             args.model.fc = nn.Identity()
             args.model = BaseHeadSplit(args.model, args.head)
             server = FedCALM(args, i)
+        
+        elif args.algorithm == "FedFlayer":
+            server = FedFlayer(args, i)
         
         else:
             raise NotImplementedError
