@@ -1,6 +1,7 @@
 import time
-#import copy
+import copy
 import numpy as np
+import torch
 from flcore.clients.clientflayer import clientFLayer
 from flcore.servers.serverbase import Server
 
@@ -101,8 +102,12 @@ class FedFlayer(Server):
     def aggregate_sparse(self, results):
         num_examples_total = sum([num_examples for _, num_examples in results]) 
 
-        weighted_weights = [
+        """weighted_weights = [
         np.multiply(weights, num_examples) for weights, num_examples in results
+        ]"""
+        weighted_weights = [
+            [layer * num_examples for layer in weights] 
+            for weights, num_examples in results
         ]
 
         client_num_examples = np.array([num_examples for _, num_examples in results])
@@ -125,6 +130,13 @@ class FedFlayer(Server):
         
         return weights_prime
     
+    def set_parameters(self, model, parameters):
+        for new_param, old_param in zip(parameters, model.parameters()):
+            old_param.data = torch.tensor(new_param, dtype=torch.float).to(self.device)
+    
+    def get_parameters(self, model):
+        return [val.data.cpu().numpy() for val in model.parameters()]
+
     def aggregate_parameters(self):
 
         parameters_lastround = self.get_parameters(self.global_model)
@@ -144,4 +156,4 @@ class FedFlayer(Server):
 
         self.set_parameters(self.global_model, parameters_thisround)
 
-        del parameters_lastround, parameters_lastround, parameters_thisround_sparse_np
+        del parameters_lastround, parameters_thisround, parameters_thisround_sparse_np

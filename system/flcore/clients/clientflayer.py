@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import time
-#import copy
+import copy
 import math
 #import os
 from flcore.clients.clientbase import Client
@@ -15,6 +15,8 @@ class clientFLayer(Client):
 
         self.local_learning_rate = args.local_learning_rate
         self.layer_idx = args.layer_idx
+        self.model_before = None
+        self.model = copy.deepcopy(args.model)
 
         self.model_str = getattr(args, "model_str", None)
         self.aggregate_params = []
@@ -37,6 +39,7 @@ class clientFLayer(Client):
         self.local_aggregation = LocalAggregation(self.layer_idx)
 
     def train(self, is_selected):
+        self.model_before = copy.deepcopy(self.model)
         if is_selected:
             trainloader = self.load_train_data()
             self.model.train()
@@ -66,29 +69,30 @@ class clientFLayer(Client):
                     if i == 0:
                         adaptive_lr = []
                         idx = 0
-
-                        for name, layer in self.model.named_children():
-                            grads = []
-                            for param in layer.parameters():
-                                if param.grad is not None:
-                                    grad_norm = param.grad.data.norm(2).item()
-                                    if self.args.model == "FedAvgCNN":
+                        model_name = self.model.__class__.__name__
+                        if model_name == "FedAvgCNN":
+                            for name, layer in self.model.named_children():
+                                grads = []
+                                for param in layer.parameters():
+                                    if param.grad is not None:
+                                        grad_norm = param.grad.data.norm(2).item()
+                                   
                                         grads.append(20 * self.local_learning_rate *
                                                  (1 + (idx / 3) * math.log(1 + 1 / grad_norm)))
 
-                            if grads:
-                                idx += 1
-                                adaptive_lr.append(sum(grads) / len(grads))
+                                if grads:
+                                    idx += 1
+                                    adaptive_lr.append(sum(grads) / len(grads))
             
-                        if self.args.model == "FedAvgCNN":
-                            params = [
+                            if len(adaptive_lr) >= 3:
+                                params = [
                             {'params': list(self.model.parameters())[:2], 'lr': self.learning_rate},
                             {'params': list(self.model.parameters())[2:4], 'lr': adaptive_lr[1]},
                             {'params': list(self.model.parameters())[4:6], 'lr': adaptive_lr[2]},
                             {'params': list(self.model.parameters())[6:8], 'lr': self.learning_rate / 5},
-                        ]
-                        self.optimizer = torch.optim.SGD(params)
-                    self.optimizer.step()
+                            ]
+                        #self.optimizer = torch.optim.SGD(params)
+                        self.optimizer.step()
 
             if self.learning_rate_decay:
                 self.learning_rate_scheduler.step()
