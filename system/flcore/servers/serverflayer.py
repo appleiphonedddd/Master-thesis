@@ -28,7 +28,7 @@ class FedFlayer(Server):
 
             client.send_time_cost['num_rounds'] += 1
             client.send_time_cost['total_cost'] += 2 * (time.time() - start_time)
-    
+
     def send_models(self, accs):
         assert (len(self.clients) > 0)
 
@@ -102,9 +102,6 @@ class FedFlayer(Server):
     def aggregate_sparse(self, results):
         num_examples_total = sum([num_examples for _, num_examples in results]) 
 
-        """weighted_weights = [
-        np.multiply(weights, num_examples) for weights, num_examples in results
-        ]"""
         weighted_weights = [
             [layer * num_examples for layer in weights] 
             for weights, num_examples in results

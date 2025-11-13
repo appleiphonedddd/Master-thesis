@@ -91,7 +91,7 @@ class clientFLayer(Client):
                             {'params': list(self.model.parameters())[4:6], 'lr': adaptive_lr[2]},
                             {'params': list(self.model.parameters())[6:8], 'lr': self.learning_rate / 5},
                             ]
-                        #self.optimizer = torch.optim.SGD(params)
+                            self.optimizer = torch.optim.SGD(params)
                         self.optimizer.step()
 
             if self.learning_rate_decay:
