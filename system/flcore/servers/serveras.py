@@ -74,8 +74,6 @@ class FedAS(Server):
 
             self.print_fim_histories()
 
-
-
             self.receive_models()
             if self.dlg_eval and i%self.dlg_gap == 0:
                 self.call_dlg(i)
