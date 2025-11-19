@@ -1,10 +1,8 @@
 import time
 import copy
 import numpy as np
-# from flcore.clients.clientavg import clientAVG
 from flcore.clients.clientas import clientAS
 from flcore.servers.serverbase import Server
-
 
 class FedAS(Server):
     def __init__(self, args, times):
@@ -17,7 +15,6 @@ class FedAS(Server):
         print(f"\nJoin ratio / total clients: {self.join_ratio} / {self.num_clients}")
         print("Finished creating server and clients.")
 
-        # self.load_model()
         self.Budget = []
 
     def all_clients(self):
@@ -48,6 +45,7 @@ class FedAS(Server):
         FIM_weight_list = []
         for id in self.uploaded_ids:
             FIM_weight_list.append(self.clients[id].fim_trace_history[-1])
+        
         # normalization to obtain weight
         FIM_weight_list = [FIM_value/sum(FIM_weight_list) for FIM_value in FIM_weight_list]
 
@@ -62,29 +60,17 @@ class FedAS(Server):
 
             selected_ids = [client.id for client in self.selected_clients]
 
-
-            # self.send_models()
-
             # evaluate personalized models, ie FedAvg-C
             if i%self.eval_gap == 0:
                 print(f"\n-------------Round number: {i}-------------")
-                #print("\nEvaluate global model")
                 self.evaluate()
 
-            # self.send_models()
             self.send_selected_models(selected_ids, i)
 
-            # print(f'send selected models done')
-
             # for client in self.selected_clients:
-            #     client.train()
         
-
             for client in self.alled_clients:
-                # print("===============")
                 client.train(client.id in selected_ids)
-            # assert 1==0
-
 
             self.print_fim_histories()
 
@@ -93,7 +79,6 @@ class FedAS(Server):
             self.receive_models()
             if self.dlg_eval and i%self.dlg_gap == 0:
                 self.call_dlg(i)
-
 
             self.aggregate_wrt_fisher()
 
@@ -104,8 +89,6 @@ class FedAS(Server):
                 break
 
         print("\nBest accuracy.")
-        # self.print_(max(self.rs_test_acc), max(
-        #     self.rs_train_acc), min(self.rs_train_loss))
         print(max(self.rs_test_acc))
         print("\nAverage time cost per round.")
         print(sum(self.Budget[1:])/len(self.Budget[1:]))

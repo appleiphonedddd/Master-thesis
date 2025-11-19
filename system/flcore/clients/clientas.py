@@ -7,9 +7,6 @@ import copy
 from flcore.clients.clientbase import Client
 from torch.autograd import grad
 
-
-
-
 class clientAS(Client):
 
 
@@ -20,10 +17,8 @@ class clientAS(Client):
     def train(self, is_selected):
         if is_selected:
             trainloader = self.load_train_data()
-            # self.model.to(self.device)
             self.model.train()
-
-        
+     
             start_time = time.time()
 
             max_local_epochs = self.local_epochs
@@ -45,8 +40,6 @@ class clientAS(Client):
                     loss.backward()
                     self.optimizer.step()
 
-            # self.model.cpu()
-
             if self.learning_rate_decay:
                 self.learning_rate_scheduler.step()
 
@@ -56,14 +49,16 @@ class clientAS(Client):
 
             # set model to eval mode
             self.model.eval()
-            # print(f'client{self.id}, start cal fim.')
+
             # Compute FIM and its trace after training
             fim_trace_sum = 0
             for i, (x, y) in enumerate(self.load_train_data()):
+                
                 # Forward pass
                 x = x.to(self.device)
                 y = y.to(self.device)
                 outputs = self.model(x)
+                
                 # Negative log likelihood as our loss
                 nll = -torch.nn.functional.log_softmax(outputs, dim=1)[range(len(y)), y].mean()
 
@@ -76,23 +71,21 @@ class clientAS(Client):
 
             # add the fisher log
             self.fim_trace_history.append(fim_trace_sum.item())
-
-            # Evaluate on the client's test dataset
-            # test_acc = self.evaluate()
-            # print(f"Client {self.id}, Test Accuracy: {test_acc:.1f}, FIM-T value: {fim_trace_sum.item():.1f}")
-            # print(f"Selected: {is_selected}, FIM-T value change: {(self.fim_trace_history[-1] - (self.fim_trace_history[-2] if len(self.fim_trace_history) > 1 else 0)):.1f}")
 
         else:
             trainloader = self.load_train_data()
-            # self.model.to(self.device)
+
             self.model.eval()
+
             # Compute FIM and its trace after training
             fim_trace_sum = 0
             for i, (x, y) in enumerate(trainloader):
+                
                 # Forward pass
                 x = x.to(self.device)
                 y = y.to(self.device)
                 outputs = self.model(x)
+                
                 # Negative log likelihood as our loss
                 nll = -torch.nn.functional.log_softmax(outputs, dim=1)[range(len(y)), y].mean()
 
@@ -105,11 +98,6 @@ class clientAS(Client):
 
             # add the fisher log
             self.fim_trace_history.append(fim_trace_sum.item())
-
-            # Evaluate on the client's test dataset
-            # test_acc = self.evaluate()
-            # print(f"Client {self.id}, Test Accuracy: {test_acc:.1f}, FIM-T value: {fim_trace_sum.item():.1f}")
-            # print(f"FIM-T value change: {(self.fim_trace_history[-1] - (self.fim_trace_history[-2] if len(self.fim_trace_history) > 1 else 0)):.1f}")
 
     def evaluate(self):
         testloader = self.load_test_data()
@@ -126,11 +114,6 @@ class clientAS(Client):
                 correct += predicted.eq(y).sum().item()
         accuracy = 100. * correct / total
         return accuracy
-    
-    # def set_parameters(self, model, progress):
-        # # Substitute the parameters of the base, enabling personalization
-        # for new_param, old_param in zip(model.base.parameters(), self.model.base.parameters()):
-        #     old_param.data = new_param.data.clone()
 
     def set_parameters(self, model, progress):
 
@@ -139,7 +122,6 @@ class clientAS(Client):
         batch_size = 16  # or any other suitable value
         trainloader = self.load_train_data(batch_size=batch_size)
 
-        # print(f'client{id}')
         for x_batch, y_batch in trainloader:
             x_batch = x_batch.to(self.device)
             y_batch = y_batch.to(self.device)
@@ -153,7 +135,6 @@ class clientAS(Client):
 
         mean_prototypes = []
 
-        # print(f'client{self.id}')
         for class_prototypes in local_prototypes:
 
             if not class_prototypes == []:
@@ -170,7 +151,6 @@ class clientAS(Client):
         alignment_optimizer = torch.optim.SGD(model.base.parameters(), lr=0.01)  # Adjust learning rate and optimizer as needed
         alignment_loss_fn = torch.nn.MSELoss()
 
-        # print(f'client{self.id}')
         for _ in range(1):  # Iterate for 1 epochs; adjust as needed
             for x_batch, y_batch in trainloader:
                 x_batch = x_batch.to(self.device)
@@ -188,5 +168,3 @@ class clientAS(Client):
         for new_param, old_param in zip(model.base.parameters(), self.model.base.parameters()):
             old_param.data = new_param.data.clone()
 
-
-        # end
