@@ -1,6 +1,8 @@
 import time
 import copy
 import numpy as np
+import csv
+import os
 from flcore.clients.clientas import clientAS
 from flcore.servers.serverbase import Server
 
@@ -95,6 +97,7 @@ class FedAS(Server):
 
         self.save_results()
         self.save_global_model()
+        self.save_fim_trace_csv()
 
         if self.num_new_clients > 0:
             self.eval_new_clients = True
@@ -117,3 +120,19 @@ class FedAS(Server):
         avg_fim_histories = np.mean(avg_fim_histories, axis=0)
         formatted_avg = [f"{value:.1f}" for value in avg_fim_histories]
         print(f"Avg Sum_T_FIM : {formatted_avg}")
+    
+    def save_fim_trace_csv(self):
+        csv_file = 'fim_trace_histories.csv'
+
+        # Prepare header: Round_0, Round_1, ...
+        num_rounds = len(self.alled_clients[0].fim_trace_history)
+        header = ['Client_ID'] + [f'Round_{i}' for i in range(num_rounds)]
+
+        with open(csv_file, mode='w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(header)
+
+            # Write each client's full history
+            for client in self.alled_clients:
+                row = [client.id] + client.fim_trace_history
+                writer.writerow(row)
