@@ -121,10 +121,10 @@ class FedAS(Server):
         formatted_avg = [f"{value:.1f}" for value in avg_fim_histories]
         print(f"Avg Sum_T_FIM : {formatted_avg}")
     
-    def save_fim_trace_csv(self):
-        csv_file = 'fim_trace_histories.csv'
+    def save_fim_trace_csv(self, save_dir='./results'):
+        os.makedirs(save_dir, exist_ok=True)
+        csv_file = os.path.join(save_dir, 'fim_trace_histories.csv')
 
-        # Prepare header: Round_0, Round_1, ...
         num_rounds = len(self.alled_clients[0].fim_trace_history)
         header = ['Client_ID'] + [f'Round_{i}' for i in range(num_rounds)]
 
@@ -132,7 +132,6 @@ class FedAS(Server):
             writer = csv.writer(file)
             writer.writerow(header)
 
-            # Write each client's full history
             for client in self.alled_clients:
                 row = [client.id] + client.fim_trace_history
                 writer.writerow(row)
