@@ -46,12 +46,12 @@ def plot_all_clients(csv_path: str, rolling_window=None):
 
     plt.xlabel("Communication Round", fontsize=14)
     plt.ylabel("FIM Trace", fontsize=14)
-    plt.title("FIM Trace per Client on TinyImagenet", fontsize=16)
+    plt.title("FIM Trace per Client on Cifar100", fontsize=16)
     plt.grid(True, linewidth=0.3, alpha=0.6)
     plt.legend(fontsize=9, ncol=3)
     plt.tight_layout()
-    plt.savefig("TinyImagenet.png", dpi=300)
-    print("Finished plotting FIM traces. Saved to TinyImagenet.png")
+    plt.savefig("Cifar100.png", dpi=300)
+    print("Finished plotting FIM traces. Saved to Cifar100.png")
 
 if __name__ == "__main__":
-    plot_all_clients("Tiny.csv", rolling_window=None)
+    plot_all_clients("Cifar100.csv", rolling_window=None)
