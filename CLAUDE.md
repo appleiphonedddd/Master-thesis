@@ -1,134 +1,285 @@
-# Master Thesis — FedFIP: Personalized Federated Learning
+# Master Thesis — Personalized Federated Learning
 
 ## Project Overview
 
-This is a research codebase for **FedFIP** (Fisher-weighted Aggregation and Prototype Integration for Personalized Federated Learning), a master's thesis project built on top of the PFLlib framework.
+Research codebase for personalized federated learning experiments, built on top of the [PFLlib](https://github.com/TsingZ0/PFLlib) framework. The project implements and benchmarks multiple FL algorithms across standard vision and text datasets.
 
-The core idea: each client computes a **Fisher Information Matrix (FIM) trace** as a reliability score, and the server aggregates global models via softmax-weighted averaging. Simultaneously, clients share lightweight **class-wise feature prototypes** with the server, which forms global semantic centers to guide local training — enabling cross-client knowledge transfer without sharing raw data.
+---
 
 ## Repository Structure
 
 ```
 Master-thesis/
-├── dataset/               # Dataset generators (one script per dataset)
-│   ├── generate_*.py      # Downloads & partitions data for FL simulation
-│   └── utils/             # dataset_utils.py, HAR_utils.py, language_utils.py
-├── system/                # Main training code
-│   ├── main.py            # Entry point — arg parsing, model & algorithm dispatch
-│   ├── flcore/
-│   │   ├── clients/       # clientbase.py + one file per algorithm (clientXXX.py)
-│   │   ├── servers/       # serverbase.py + one file per algorithm (serverXXX.py)
-│   │   ├── trainmodel/    # models.py, resnet.py, alexnet.py, bilstm.py, ...
-│   │   ├── optimizers/    # fedoptimizer.py
-│   │   └── loralib/       # LoRA layers
-│   └── utils/             # data_utils, result_utils, mem_utils, ALA, FLAYER, INF
-├── visualize/             # Plotting scripts for accuracy / loss curves
-├── env.yaml               # Conda environment (name: PFL, Python 3.11)
+├── dataset/                        # One generator script per dataset
+│   ├── generate_{NAME}.py
+│   └── utils/
+│       ├── dataset_utils.py        # separate_data, split_data, save_file
+│       ├── HAR_utils.py
+│       └── language_utils.py
+├── system/
+│   ├── main.py                     # Entry point: arg parsing, model dispatch, algorithm dispatch
+│   └── flcore/
+│       ├── clients/
+│       │   ├── clientbase.py       # Base Client class — extend this for every algorithm
+│       │   └── client{NAME}.py
+│       ├── servers/
+│       │   ├── serverbase.py       # Base Server class — extend this for every algorithm
+│       │   └── server{NAME}.py
+│       ├── trainmodel/
+│       │   ├── models.py           # FedAvgCNN, DNN, MLR, BaseHeadSplit, etc.
+│       │   ├── resnet.py
+│       │   ├── alexnet.py
+│       │   ├── bilstm.py
+│       │   ├── mobilenet_v2.py
+│       │   └── transformer.py
+│       ├── optimizers/
+│       │   └── fedoptimizer.py
+│       └── loralib/
+│           └── layers.py
+├── system/utils/
+│   ├── data_utils.py               # read_client_data
+│   ├── result_utils.py             # average_data
+│   ├── mem_utils.py                # MemReporter
+│   └── dlg.py                      # Deep Leakage from Gradients
+├── visualize/
+│   ├── plot_metric.py              # Line curves from CSV files
+│   ├── plot_bar_chart.py           # Bar chart (hardcoded accuracy table)
+│   └── practical/
+│       └── {Dataset}/
+│           ├── Accuracy/           # {algo}_run{i}.csv — columns: round, test_acc
+│           ├── Loss/               # {algo}_run{i}.csv — columns: round, train_loss
+│           └── Result/             # {Dataset}_{algo}.json — best accuracy per run
+├── results/                        # Legacy .h5 files
+├── env.yaml
 └── README.md
 ```
 
-## Environment Setup
+---
+
+## Environment
 
 ```sh
-conda env create -f env.yaml
+conda env create -f env.yaml   # name: PFL, Python 3.11
 conda activate PFL
 ```
 
-Key dependencies: PyTorch 2.11.0, torchvision, numpy<2, scikit-learn, scipy, cvxpy, higher, transformers.
+Key deps: PyTorch 2.11.0, torchvision, numpy<2, scikit-learn, scipy, cvxpy, higher, transformers, h5py, pandas, matplotlib. GPU required (CUDA 12.x).
 
-GPU: NVIDIA CUDA required (tested on RTX 3060, CUDA 12.x).
+---
 
-## How to Run an Experiment
+## Running Experiments
 
-**Step 1 — generate a partitioned dataset:**
 ```sh
+# Step 1 — generate partitioned data
 cd dataset/
 python generate_FashionMNIST.py iid balance -       # IID balanced
-python generate_FashionMNIST.py noniid - pat        # Pathological non-IID
+python generate_FashionMNIST.py noniid - pat        # pathological non-IID
 python generate_FashionMNIST.py noniid - dir        # Dirichlet non-IID
-```
 
-**Step 2 — run training:**
-```sh
+# Step 2 — train
 cd system/
-python main.py -data FashionMNIST -m CNN -algo FedFIP -gr 300 -did 0
-```
+python main.py -data FashionMNIST -m CNN -algo FedAvg -gr 300 -did 0
 
-Common flags:
-| Flag | Meaning | Default |
-|------|---------|---------|
-| `-data` | Dataset name | MNIST |
-| `-m` | Model (CNN, ResNet18, DNN, …) | CNN |
-| `-algo` | Algorithm key | FedAvg |
-| `-gr` | Global communication rounds | 2000 |
-| `-nc` | Number of clients | 20 |
-| `-jr` | Join ratio per round | 1.0 |
-| `-ls` | Local epochs per round | 1 |
-| `-did` | CUDA device id(s) | 0 |
-| `-ncl` | Number of classes | 10 |
-
-**Step 3 — visualize results:**
-```sh
+# Step 3 — visualize
 cd visualize/
-python plot_metric.py run1.csv run2.csv --metric test_acc --ema 0.15 --output out.png
-python plot_metric.py run1.csv run2.csv --metric train_loss --ema 0.15 --output out.png
-python plot_bar_chart.py
+python plot_metric.py practical/FashionMNIST/Accuracy/FedAvg_run0.csv \
+    --metric test_acc --ema 0.15 --output out.png
 ```
 
-Per-round CSV files (`{algo}_run{i}_rs_test_acc.csv`, `{algo}_run{i}_rs_train_loss.csv`) are saved automatically in the working directory after each run.
+### Common flags
 
-## Implemented Algorithms
+| Flag | Long form | Default | Notes |
+|------|-----------|---------|-------|
+| `-data` | `--dataset` | `MNIST` | Must match a generated dataset folder |
+| `-m` | `--model` | `CNN` | See Model Keys below |
+| `-algo` | `--algorithm` | `FedAvg` | See Algorithm Keys below |
+| `-gr` | `--global_rounds` | `2000` | Communication rounds |
+| `-nc` | `--num_clients` | `20` | Total clients |
+| `-jr` | `--join_ratio` | `1.0` | Fraction selected per round |
+| `-ls` | `--local_epochs` | `1` | Local update epochs |
+| `-lr` | `--local_learning_rate` | `0.005` | SGD LR |
+| `-lbs` | `--batch_size` | `10` | Mini-batch size |
+| `-ncl` | `--num_classes` | `10` | Output classes |
+| `-did` | `--device_id` | `"0"` | Sets `CUDA_VISIBLE_DEVICES` |
+| `-eg` | `--eval_gap` | `1` | Evaluate every N rounds |
+| `-t` | `--times` | `1` | Independent repetitions |
+| `-ab` | `--auto_break` | `False` | Early stop when top-1 stalls |
 
-The algorithm passed to `-algo` maps to a `server{NAME}.py` / `client{NAME}.py` pair under `flcore/`. Key algorithms:
+---
 
-| Algorithm | Key |
-|-----------|-----|
-| **FedFIP** (this thesis) | `FedFIP` |
-| FedAS (direct baseline) | `FedAS` |
-| DCPFL | `DCPFL` |
-| FedCPD | `FedCPD` |
-| FedCALM | `FedCALM` |
-| FedAvg | `FedAvg` |
-| FedProto | `FedProto` |
-| … many more | see `main.py` |
+## Design Patterns
 
-## Architecture Conventions
+### 1. Server / Client Pair
 
-### Adding a New Algorithm
+Every algorithm is a **matched pair** of one server file and one client file:
 
-1. Create `system/flcore/clients/clientNAME.py` — extend `Client` from `clientbase.py`.
-2. Create `system/flcore/servers/serverNAME.py` — extend `Server` from `serverbase.py`.
-3. Register in `system/main.py`: add an `elif args.algorithm == "NAME":` branch.
+```
+flcore/servers/server{NAME}.py   →   class {NAME}(Server)
+flcore/clients/client{NAME}.py   →   class client{NAME}(Client)
+```
 
-Most algorithms that use a split head/backbone pattern call:
+The server owns the global model and the training loop. The client owns a local model copy and implements local training. The server instantiates all clients and drives all communication.
+
+### 2. The Round Loop (server)
+
+Every `server.train()` follows this skeleton — implement only what your algorithm changes:
+
+```python
+def train(self):
+    for i in range(self.global_rounds + 1):
+        self.selected_clients = self.select_clients()
+
+        if i % self.eval_gap == 0:
+            self.evaluate()                     # calls test_metrics + train_metrics on ALL clients
+
+        self.send_models()                      # push global_model to selected clients
+        for client in self.selected_clients:
+            client.train()                      # local update
+        self.receive_models()                   # collect uploaded models
+        self.aggregate_parameters()             # FedAvg by default
+
+    self.save_results()
+    self.save_global_model()
+```
+
+Override `send_models` / `receive_models` / `aggregate_parameters` as needed. Add extra state (e.g. prototypes, control variates) as server attributes and pass them through `send_models`.
+
+### 3. BaseHeadSplit — Backbone / Head Split
+
+Many algorithms need separate access to the feature extractor (`base`) and the classifier (`head`). This is done in `main.py` before instantiating the server:
+
 ```python
 args.head = copy.deepcopy(args.model.fc)
 args.model.fc = nn.Identity()
 args.model = BaseHeadSplit(args.model, args.head)
 ```
-before instantiating the server.
 
-### Adding a New Dataset
+`BaseHeadSplit` (in `models.py`) wraps the two sub-modules and exposes:
+- `model.base(x)` — feature extractor forward pass only
+- `model.head(z)` — classifier forward pass only
+- `model(x)` — full forward pass
 
-Create `dataset/generate_DATA.py` using `generate_MNIST.py` as a template:
+**Use this pattern whenever** your algorithm needs to treat the backbone and classifier separately (prototype extraction, partial personalisation, head-only aggregation, etc.).
+
+### 4. Client `set_parameters`
+
+The base `set_parameters(model)` simply copies all parameters from the global model into the client's local model. Override it to implement personalised model receipt — e.g. only copy the backbone, align the backbone to local data before copying, or mix global and local weights.
+
+### 5. Evaluation
+
+`server.evaluate()` calls `client.test_metrics()` and `client.train_metrics()` on **all** clients (not just selected ones), then appends aggregate accuracy / loss to `self.rs_test_acc` / `self.rs_train_loss`. Override `test_metrics` on the client if the evaluation forward pass differs from training (e.g. uses a personalised head).
+
+### 6. Algorithm-Specific Flags
+
+Add new hyperparameters to the `argparse` block at the bottom of `main.py`. Group them with a comment. Access via `args.your_flag` in both server and client `__init__`.
+
+---
+
+## Adding a New Algorithm
+
+1. **Client** — create `system/flcore/clients/client{NAME}.py`:
+   ```python
+   from flcore.clients.clientbase import Client
+
+   class client{NAME}(Client):
+       def __init__(self, args, id, train_samples, test_samples, **kwargs):
+           super().__init__(args, id, train_samples, test_samples, **kwargs)
+           # algorithm-specific state
+
+       def train(self):
+           # local update logic
+   ```
+
+2. **Server** — create `system/flcore/servers/server{NAME}.py`:
+   ```python
+   from flcore.servers.serverbase import Server
+   from flcore.clients.client{NAME} import client{NAME}
+
+   class {NAME}(Server):
+       def __init__(self, args, times):
+           super().__init__(args, times)
+           self.set_slow_clients()
+           self.set_clients(client{NAME})
+
+       def train(self):
+           # round loop
+   ```
+
+3. **Register** in `system/main.py` — add an import and an `elif` branch:
+   ```python
+   elif args.algorithm == "NAME":
+       # apply BaseHeadSplit here if needed
+       server = NAME(args, i)
+   ```
+
+4. **Flags** — add any new `parser.add_argument` entries at the bottom of `main.py`.
+
+---
+
+## Adding a New Dataset
+
+Create `dataset/generate_{NAME}.py` following `generate_MNIST.py`:
+
 ```python
 from utils.dataset_utils import separate_data, split_data, save_file
 ```
 
-### Adding a New Model
+The script must accept three positional args: `{iid|noniid} {balance|-} {-|pat|dir}` and write per-client `.pkl` files under `dataset/{NAME}/`.
 
-Add it to `system/flcore/trainmodel/models.py` and handle it in the model-dispatch block in `main.py`.
+---
 
-## FedFIP-Specific Details
+## Adding a New Model
 
-- **Fisher weighting** (`serverfip.py:aggregate_wrt_fisher`): collects `fim_trace_history[-1]` from all uploaded clients, normalises with softmax-style division, then does a weighted parameter average.
-- **Prototype aggregation** (`serverfip.py:aggregate_prototypes`): averages same-class prototype vectors from clients that have local data for that class; zero vectors are excluded via an abs-sum mask.
-- **Client training** (`clientfip.py:train`): runs standard CE loss + prototype alignment loss `α * ||z - proto_y||²` when global prototypes are available, then computes and stores the FIM trace. Non-selected clients still compute their FIM trace (no gradient update).
-- **`-al` / `--alpha`** controls the prototype alignment loss weight (default 1.0).
+1. Add the model class to `system/flcore/trainmodel/models.py` (or a new file in `trainmodel/`).
+2. Add a dispatch branch in the model-selection block in `main.py`. Ensure the class has a `.fc` attribute if you plan to use the BaseHeadSplit pattern.
+
+---
+
+## Base Class API Reference
+
+### `Client` (clientbase.py)
+
+| Attribute / Method | Purpose |
+|--------------------|---------|
+| `self.model` | Deep copy of `args.model`; the client's local model |
+| `self.optimizer` | SGD over `self.model.parameters()` |
+| `self.loss` | `nn.CrossEntropyLoss()` |
+| `self.local_epochs` | Local update epochs per round |
+| `self.device` | CUDA/CPU device |
+| `load_train_data(batch_size)` | Returns shuffled DataLoader (drop_last=True) |
+| `load_test_data(batch_size)` | Returns DataLoader |
+| `set_parameters(model)` | Copy all params from `model` → `self.model` |
+| `test_metrics()` | Returns `(correct, total, auc)` |
+| `train_metrics()` | Returns `(loss_sum, count)` |
+| `save_item(item, name)` / `load_item(name)` | Persist tensors to `save_folder_name/` |
+
+### `Server` (serverbase.py)
+
+| Attribute / Method | Purpose |
+|--------------------|---------|
+| `self.global_model` | The shared global model |
+| `self.clients` | List of all Client objects |
+| `self.selected_clients` | Clients chosen this round |
+| `self.uploaded_ids`, `self.uploaded_models`, `self.uploaded_weights` | Set by `receive_models()` |
+| `self.rs_test_acc`, `self.rs_train_loss` | Per-round metrics list |
+| `set_clients(clientObj)` | Instantiate all clients |
+| `select_clients()` | Random sample of `num_join_clients` |
+| `send_models()` | Push `global_model` to all clients |
+| `receive_models()` | Pull models; applies drop_rate and time_threshold |
+| `aggregate_parameters()` | Sample-count weighted FedAvg |
+| `add_parameters(w, client_model)` | `global += w * client` |
+| `evaluate()` | Aggregate metrics, print, append to `rs_*` |
+| `save_results()` | Write `.h5` to `../results/` |
+| `save_global_model()` | Save `models/{dataset}/{algo}_server.pt` |
+
+---
 
 ## Output Files
 
-- `{algo}_run{i}_rs_test_acc.csv` — per-round test accuracy
-- `{algo}_run{i}_rs_train_loss.csv` — per-round train loss
-- Global model checkpoints saved via `server.save_global_model()`
-- Aggregated statistics via `average_data()` in `utils/result_utils.py`
+| Path | Content |
+|------|---------|
+| `visualize/practical/{Dataset}/Accuracy/{algo}_run{i}.csv` | `round, test_acc` per round |
+| `visualize/practical/{Dataset}/Loss/{algo}_run{i}.csv` | `round, train_loss` per round |
+| `visualize/practical/{Dataset}/Result/{Dataset}_{algo}.json` | Best accuracy per run index |
+| `results/{Dataset}_{algo}_{goal}_{times}.h5` | Legacy HDF5 (test_acc, test_auc, train_loss) |
+| `system/models/{Dataset}/{algo}_server.pt` | Global model checkpoint |
