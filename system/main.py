@@ -9,6 +9,8 @@ import warnings
 import numpy as np
 import torchvision
 import logging
+import json
+import pathlib
 import pandas as pd
 
 from flcore.servers.serveravg import FedAvg
@@ -75,6 +77,14 @@ logger.setLevel(logging.ERROR)
 
 warnings.simplefilter("ignore")
 torch.manual_seed(0)
+
+def practical_dir(dataset: str) -> pathlib.Path:
+    repo_root = pathlib.Path(__file__).resolve().parent.parent
+    base = repo_root / "visualize" / "practical" / dataset
+    for sub in ("Accuracy", "Loss", "Result"):
+        (base / sub).mkdir(parents=True, exist_ok=True)
+    return base
+
 
 def run(args):
 
@@ -409,23 +419,37 @@ def run(args):
 
         server.train()
 
+        practical = practical_dir(args.dataset)
+
         if hasattr(server, 'rs_test_acc') and len(server.rs_test_acc) > 0:
             df_acc = pd.DataFrame({
                 'round': list(range(len(server.rs_test_acc))),
                 'test_acc': server.rs_test_acc,
             })
-            csv_name = f"{args.algorithm}_run{i}_rs_test_acc.csv"
-            df_acc.to_csv(csv_name, index=False)
-            print(f"[Info] Saved per-round test accuracy for {args.algorithm} run {i} to {csv_name}")
-        
+            csv_path = practical / "Accuracy" / f"{args.algorithm}_run{i}.csv"
+            df_acc.to_csv(csv_path, index=False)
+            print(f"[Info] Saved test accuracy  → {csv_path}")
+
         if hasattr(server, 'rs_train_loss') and len(server.rs_train_loss) > 0:
             df_loss = pd.DataFrame({
                 'round': list(range(len(server.rs_train_loss))),
                 'train_loss': server.rs_train_loss,
             })
-            csv_name = f"{args.algorithm}_run{i}_rs_train_loss.csv"
-            df_loss.to_csv(csv_name, index=False)
-            print(f"[Info] Saved per-round train loss for {args.algorithm} run {i} to {csv_name}")
+            csv_path = practical / "Loss" / f"{args.algorithm}_run{i}.csv"
+            df_loss.to_csv(csv_path, index=False)
+            print(f"[Info] Saved train loss     → {csv_path}")
+
+        if hasattr(server, 'rs_test_acc') and server.rs_test_acc:
+            result_path = practical / "Result" / f"{args.dataset}_{args.algorithm}.json"
+            result = {}
+            if result_path.exists():
+                with open(result_path) as f:
+                    result = json.load(f)
+            result[f"run_{i}"] = max(server.rs_test_acc)
+            with open(result_path, "w") as f:
+                json.dump(result, f, indent=2)
+            print(f"[Info] Saved best accuracy  → {result_path}")
+
         time_list.append(time.time()-start)
 
     print(f"\nAverage time cost: {round(np.average(time_list), 2)}s.")
