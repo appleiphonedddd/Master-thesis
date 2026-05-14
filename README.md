@@ -161,9 +161,9 @@ python plot_bar_chart.py
 For instance
 
 ```sh
-python plot_metric.py practical/MNIST/Acc/FedAS.csv practical/MNIST/Acc/FedAvg.csv practical/MNIST/Acc/FedDodm.csv practical/MNIST/Acc/DCPFL.csv practical/MNIST/Acc/FedCPD.csv practical/MNIST/Acc/FedFIP.csv  --metric test_acc --ema 0.15 --output MNIST_Acc.png
+python plot_metric.py practical/Cifar10/Accuracy/FedAvg.csv practical/Cifar10/Accuracy/FedBABU.csv practical/Cifar10/Accuracy/FedProto.csv practical/Cifar10/Accuracy/FedALA.csv practical/Cifar10/Accuracy/FedAS.csv --metric test_acc --ema 0.15 --output Cifar10_Accuracy.png 
 
-python plot_metric.py practical/MNIST/Loss/FedAS.csv practical/MNIST/Loss/FedAvg.csv practical/MNIST/Loss/FedDodm.csv practical/MNIST/Loss/DCPFL.csv practical/MNIST/Loss/FedCPD.csv practical/MNIST/Loss/FedFIP.csv  --metric train_loss --ema 0.15 --output MNIST_Loss.png
+python plot_metric.py practical/Cifar10/Loss/FedAvg.csv practical/Cifar10/Loss/FedBABU.csv practical/Cifar10/Loss/FedProto.csv practical/Cifar10/Loss/FedALA.csv practical/Cifar10/Loss/FedAS.csv --metric train_loss --ema 0.15 --output Cifar10_Loss.png 
 
 ```
 
